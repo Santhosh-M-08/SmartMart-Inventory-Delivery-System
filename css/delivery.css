@@ -353,6 +353,11 @@ a {
     background: #DCFCE7;
 }
 
+.cancelled-icon {
+    color: #DC2626;
+    background: #FEE2E2;
+}
+
 .summary-value {
     margin: 17px 0 4px;
     font-size: 30px;
