@@ -1,6 +1,6 @@
 # SmartMart – Inventory & Delivery Management System
 
-A college group project to develop a supermarket inventory and delivery management system.
+A group project to develop a supermarket inventory and delivery management system.
 
 ## Team
 - Member 1: Inventory Management
