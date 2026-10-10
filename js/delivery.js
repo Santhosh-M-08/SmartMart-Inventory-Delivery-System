@@ -110,6 +110,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         document.getElementById("deliveredOrders").textContent =
             orders.filter(order => order.status === "Delivered").length;
+
+        document.getElementById("cancelledOrders").textContent =
+        orders.filter(order => order.status === "Cancelled").length;
     }
 
     // Create a status badge without inserting untrusted HTML.
