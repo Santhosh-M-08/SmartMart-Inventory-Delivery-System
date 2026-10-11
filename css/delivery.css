@@ -23,6 +23,8 @@
     --shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
+/* 2. Global styles */
+
 * {
     box-sizing: border-box;
 }
@@ -63,7 +65,7 @@ a {
     display: none !important;
 }
 
-/* 2. Main layout */
+/* 3. Main layout */
 
 .app-layout {
     min-height: 100vh;
@@ -130,7 +132,7 @@ a {
     border-radius: 8px;
     color: var(--secondary-text);
     font-weight: 500;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
 .nav-link:hover {
@@ -187,7 +189,7 @@ a {
     font-size: 11px;
 }
 
-/* 3. Main content and top bar */
+/* 4. Top bar and page heading */
 
 .main-content {
     min-width: 0;
@@ -280,12 +282,12 @@ a {
     font-size: 13px;
 }
 
-/* 4. Summary cards */
+/* 5. Summary cards */
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
     margin-bottom: 27px;
 }
 
@@ -296,12 +298,18 @@ a {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .summary-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 14px rgba(15, 23, 42, 0.07);
+    background: #F0FDF4;
+    border-color: #BBF7D0;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(22, 101, 52, 0.10);
 }
 
 .summary-card-top {
@@ -328,8 +336,9 @@ a {
     font-weight: 600;
 }
 
-.total-icon {
-    color: var(--primary);
+.total-icon,
+.delivered-icon {
+    color: var(--success);
     background: #DCFCE7;
 }
 
@@ -346,11 +355,6 @@ a {
 .dispatched-icon {
     color: #6D28D9;
     background: #EDE9FE;
-}
-
-.delivered-icon {
-    color: var(--success);
-    background: #DCFCE7;
 }
 
 .cancelled-icon {
@@ -372,7 +376,7 @@ a {
     font-size: 11px;
 }
 
-/* 5. Orders panel */
+/* 6. Orders panel */
 
 .orders-panel {
     overflow: hidden;
@@ -412,7 +416,7 @@ a {
     font-weight: 600;
 }
 
-/* 6. Search and filters */
+/* 7. Search and filters */
 
 .table-toolbar {
     display: flex;
@@ -492,6 +496,8 @@ a {
     cursor: pointer;
 }
 
+/* 8. Buttons */
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -503,7 +509,7 @@ a {
     border-radius: 8px;
     font-size: 12px;
     font-weight: 600;
-    transition: background 0.2s, border-color 0.2s;
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .btn-primary {
@@ -525,7 +531,7 @@ a {
     background: #F1F5F9;
 }
 
-/* 7. Orders table */
+/* 9. Orders table */
 
 .table-wrapper {
     width: 100%;
@@ -541,29 +547,30 @@ a {
 }
 
 .orders-table th {
-    padding: 13px 20px;
-    background: #F8FAFC;
+    padding: 14px 20px;
+    background: #F1F5F9;
     color: var(--secondary-text);
     font-size: 10px;
     font-weight: 700;
     white-space: nowrap;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.6px;
+    text-align: left;
 }
 
 .orders-table td {
-    padding: 16px 20px;
+    padding: 18px 20px;
     border-top: 1px solid #F1F5F9;
     font-size: 12px;
     vertical-align: middle;
 }
 
 .orders-table tbody tr {
-    transition: background 0.15s;
+    transition: background 0.18s ease;
 }
 
 .orders-table tbody tr:hover {
-    background: #FAFCFA;
+    background: #F0FDF4;
 }
 
 .order-id {
@@ -587,7 +594,7 @@ a {
     white-space: nowrap;
 }
 
-/* 8. Status badges */
+/* 10. Status badges */
 
 .status-badge {
     display: inline-flex;
@@ -626,13 +633,15 @@ a {
     background: #FEE2E2;
 }
 
+/* 11. View details action */
+
 .action-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-height: 34px;
-    padding: 7px 10px;
+    min-height: 36px;
+    padding: 8px 12px;
     border: 1px solid #BBF7D0;
     border-radius: 7px;
     background: #F0FDF4;
@@ -640,13 +649,15 @@ a {
     font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
+    transition: background 0.18s ease, border-color 0.18s ease;
 }
 
 .action-btn:hover {
     background: #DCFCE7;
+    border-color: #86EFAC;
 }
 
-/* 9. Empty state */
+/* 12. Empty state */
 
 .empty-state {
     padding: 48px 20px;
@@ -676,7 +687,7 @@ a {
     font-size: 12px;
 }
 
-/* 10. Order details modal */
+/* 13. Order details modal */
 
 .order-modal {
     width: min(700px, calc(100% - 32px));
@@ -697,7 +708,7 @@ a {
 
 .modal-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 16px;
     padding: 23px 25px;
@@ -716,20 +727,26 @@ a {
 }
 
 .modal-close-btn {
-    display: grid;
-    place-items: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    line-height: 1;
     border: 1px solid var(--border);
-    border-radius: 8px;
-    background: white;
+    border-radius: 9px;
+    background: #FFFFFF;
     color: var(--secondary-text);
     font-size: 23px;
+    cursor: pointer;
 }
 
 .modal-close-btn:hover {
     background: #F1F5F9;
+    color: var(--primary);
+    border-color: #BBF7D0;
 }
 
 .modal-body {
@@ -740,19 +757,25 @@ a {
 .detail-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 15px;
+    gap: 16px;
 }
 
 .detail-field {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: 8px;
     min-width: 0;
-    padding: 14px;
+    padding: 17px;
     border: 1px solid var(--border);
-    border-radius: 9px;
-    background: #FAFCFD;
+    border-radius: 12px;
+    background: #F8FAFC;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.detail-field:hover {
+    border-color: #BBF7D0;
+    background: #F0FDF4;
 }
 
 .detail-field > span:first-child {
@@ -762,8 +785,10 @@ a {
 
 .detail-field strong {
     overflow-wrap: anywhere;
-    font-size: 12px;
+    font-size: 13px;
 }
+
+/* 14. Ordered items inside modal */
 
 .detail-items-section {
     margin-top: 25px;
@@ -801,37 +826,44 @@ a {
     font-size: 11px;
 }
 
+/* 15. Order total */
+
 .order-total-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 15px;
-    margin-top: 15px;
-    padding: 15px;
-    border-radius: 9px;
+    margin-top: 16px;
+    padding: 18px;
+    border: 1px solid #BBF7D0;
+    border-radius: 12px;
     background: #F0FDF4;
 }
 
 .order-total-row span {
     color: var(--secondary-text);
     font-size: 12px;
+    font-weight: 500;
 }
 
 .order-total-row strong {
     color: var(--primary);
-    font-size: 20px;
+    font-size: 22px;
+    font-weight: 700;
 }
 
+/* 16. Status update controls */
+
 .status-update-section {
-    margin-top: 25px;
-    padding-top: 22px;
+    margin-top: 27px;
+    padding-top: 24px;
     border-top: 1px solid var(--border);
 }
 
 .status-update-section > label {
     display: block;
-    margin-bottom: 10px;
-    font-size: 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -844,13 +876,20 @@ a {
 .status-update-controls select {
     flex: 1 1 180px;
     min-width: 0;
-    min-height: 40px;
-    padding: 9px 12px;
+    min-height: 42px;
+    padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: white;
     color: var(--text);
 }
+
+.status-update-controls select:focus {
+    border-color: var(--accent);
+    outline: 3px solid rgba(34, 197, 94, 0.12);
+}
+
+/* 17. Modal footer */
 
 .modal-footer {
     display: flex;
@@ -860,7 +899,7 @@ a {
     background: #FAFCFD;
 }
 
-/* 11. Toast notifications */
+/* 18. Toast notifications */
 
 .toast-container {
     position: fixed;
@@ -888,7 +927,7 @@ a {
     border-left-color: var(--danger);
 }
 
-/* 12. Accessibility helper */
+/* 19. Accessibility helper */
 
 .visually-hidden {
     position: absolute;
@@ -902,8 +941,9 @@ a {
     border: 0;
 }
 
-/* 13. Responsive layouts */
+/* 20. Responsive layouts */
 
+/* Medium desktop and smaller laptop screens */
 @media (max-width: 1250px) {
     .page-content {
         padding-right: 24px;
@@ -924,6 +964,7 @@ a {
     }
 }
 
+/* Tablets and compact windows */
 @media (max-width: 900px) {
     :root {
         --sidebar-width: 205px;
@@ -961,6 +1002,7 @@ a {
     }
 }
 
+/* Mobile screens */
 @media (max-width: 600px) {
     .sidebar {
         position: static;
@@ -1109,6 +1151,7 @@ a {
     }
 }
 
+/* Respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

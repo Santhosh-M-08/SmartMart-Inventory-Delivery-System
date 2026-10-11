@@ -347,7 +347,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Modal close controls.
     closeModalBtn.addEventListener("click", closeOrderDetails);
-    closeModalFooterBtn.addEventListener("click", closeOrderDetails);
 
     // Also clear selection when the dialog closes through Escape.
     modal.addEventListener("close", function () {
