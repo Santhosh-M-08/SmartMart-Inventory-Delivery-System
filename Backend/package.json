@@ -1,0 +1,13 @@
+{
+  "name": "smartmart-inventory-api",
+  "version": "1.0.0",
+  "description": "Optional REST API for the SmartMart inventory module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.22.3"
+  }
+}
