@@ -1162,3 +1162,209 @@ a {
         animation-iteration-count: 1 !important;
     }
 }
+
+/* ========================================
+   CREATE NEW DELIVERY MODAL
+======================================== */
+
+.create-delivery-modal {
+    width: min(620px, calc(100% - 32px));
+    max-width: 620px;
+    max-height: 85vh;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #ffffff;
+    color: #1e293b;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2);
+    overflow-y: auto;
+}
+
+.create-delivery-modal::backdrop {
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(3px);
+}
+
+.create-delivery-modal .modal-header {
+    padding: 24px;
+    border-bottom: 1px solid #e2e8f0;
+    align-items: center;
+}
+
+.create-delivery-modal .modal-header h2 {
+    margin: 4px 0 6px;
+    color: #14532d;
+    font-size: 23px;
+}
+
+.create-delivery-modal .modal-subtitle {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.create-delivery-modal .modal-body {
+    padding: 24px;
+}
+
+.create-delivery-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 26px;
+}
+
+.create-delivery-field label,
+.create-delivery-products h3 {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.create-delivery-field input,
+.delivery-product-row select,
+.delivery-product-row input {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid #dbe3ed;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1e293b;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.create-delivery-field input:focus,
+.delivery-product-row select:focus,
+.delivery-product-row input:focus {
+    border-color: #15803d;
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12);
+}
+
+.create-delivery-products h3 {
+    margin: 0 0 14px;
+}
+
+#deliveryProductRows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.delivery-product-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 90px auto;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.delivery-product-row .btn {
+    min-height: 40px;
+    padding: 8px 12px;
+    color: #b91c1c;
+    border-color: #fecaca;
+    background: #ffffff;
+}
+
+.delivery-product-row .btn:hover {
+    background: #fef2f2;
+}
+
+.create-delivery-products > .btn {
+    min-height: 40px;
+}
+
+.create-delivery-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 24px;
+    padding: 18px;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    background: #f0fdf4;
+}
+
+.create-delivery-total span {
+    color: #166534;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.create-delivery-total strong {
+    color: #166534;
+    font-size: 23px;
+    font-weight: 700;
+}
+
+.create-delivery-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 18px 24px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.create-delivery-actions .btn {
+    min-height: 42px;
+    padding: 10px 18px;
+}
+
+/* Align the page heading and New Delivery button. */
+.page-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.page-heading > div {
+    min-width: 0;
+}
+
+.page-heading #openCreateDeliveryBtn {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 12px 18px;
+}
+
+/* Responsive layout for smaller screens. */
+@media (max-width: 600px) {
+    .page-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .create-delivery-modal .modal-header,
+    .create-delivery-modal .modal-body {
+        padding: 18px;
+    }
+
+    .delivery-product-row {
+        grid-template-columns: minmax(0, 1fr) 75px;
+    }
+
+    .delivery-product-row .btn {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .create-delivery-total strong {
+        font-size: 20px;
+    }
+
+    .create-delivery-actions {
+        padding: 16px 18px;
+    }
+}

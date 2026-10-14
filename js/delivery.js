@@ -368,13 +368,285 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         try {
-            updateOrderStatus(selectedOrderId, newStatus);
+            const updatedOrderId = selectedOrderId;
+
+            updateOrderStatus(updatedOrderId, newStatus);
             refreshUI();
-            showToast(`Order #${selectedOrderId} updated to ${newStatus}.`);
+
+            closeOrderDetails();
+
+            showToast(
+                `Order #${updatedOrderId} updated to ${newStatus}.`
+            );
         } catch (error) {
-            showToast(error.message || "Unable to update order.", true);
+            showToast(
+                error.message || "Unable to update order.",
+                true
+            );
         }
     });
+
+    // ========================================
+// CREATE NEW DELIVERY
+// ========================================
+
+const createDeliveryModal =
+    document.getElementById("createDeliveryModal");
+
+const createDeliveryForm =
+    document.getElementById("createDeliveryForm");
+
+const openCreateDeliveryBtn =
+    document.getElementById("openCreateDeliveryBtn");
+
+const closeCreateDeliveryBtn =
+    document.getElementById("closeCreateDeliveryBtn");
+
+const cancelCreateDeliveryBtn =
+    document.getElementById("cancelCreateDeliveryBtn");
+
+const addDeliveryProductBtn =
+    document.getElementById("addDeliveryProductBtn");
+
+const deliveryProductRows =
+    document.getElementById("deliveryProductRows");
+
+const newDeliveryTotal =
+    document.getElementById("newDeliveryTotal");
+
+const deliveryCustomerName =
+    document.getElementById("deliveryCustomerName");
+
+
+// Format the product dropdown using shared inventory data.
+function createProductRow() {
+    const products = getProducts();
+
+    if (products.length === 0) {
+        showToast("No products are available in inventory.", true);
+        return;
+    }
+
+    const row = document.createElement("div");
+    row.className = "delivery-product-row";
+
+    const productSelect = document.createElement("select");
+    productSelect.className = "delivery-product-select";
+    productSelect.setAttribute("aria-label", "Select product");
+    productSelect.required = true;
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Choose a product";
+    placeholder.selected = true;
+    placeholder.disabled = true;
+    productSelect.appendChild(placeholder);
+
+    products.forEach(function (product) {
+        const option = document.createElement("option");
+        option.value = String(product.id);
+        option.textContent =
+            product.name + " — " +
+            formatCurrency(product.price) +
+            " (Stock: " + product.stock + ")";
+
+        if (product.stock <= 0) {
+            option.disabled = true;
+            option.textContent += " — Out of stock";
+        }
+
+        productSelect.appendChild(option);
+    });
+
+    const quantityInput = document.createElement("input");
+    quantityInput.type = "number";
+    quantityInput.className = "delivery-product-quantity";
+    quantityInput.min = "1";
+    quantityInput.step = "1";
+    quantityInput.value = "1";
+    quantityInput.required = true;
+    quantityInput.setAttribute("aria-label", "Product quantity");
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "btn btn-secondary";
+    removeButton.textContent = "Remove";
+    removeButton.setAttribute("aria-label", "Remove product");
+
+    productSelect.addEventListener("change", function () {
+        const product = products.find(function (item) {
+            return item.id === Number(productSelect.value);
+        });
+
+        if (product) {
+            quantityInput.max = String(product.stock);
+        }
+
+        updateNewDeliveryTotal();
+    });
+
+    quantityInput.addEventListener("input", updateNewDeliveryTotal);
+
+    removeButton.addEventListener("click", function () {
+        row.remove();
+        updateNewDeliveryTotal();
+    });
+
+    row.appendChild(productSelect);
+    row.appendChild(quantityInput);
+    row.appendChild(removeButton);
+
+    deliveryProductRows.appendChild(row);
+    updateNewDeliveryTotal();
+}
+
+
+// Calculate the displayed total from the selected products.
+function updateNewDeliveryTotal() {
+    let total = 0;
+
+    const rows = deliveryProductRows.querySelectorAll(
+        ".delivery-product-row"
+    );
+
+    rows.forEach(function (row) {
+        const productId = Number(
+            row.querySelector(".delivery-product-select").value
+        );
+
+        const quantity = Number(
+            row.querySelector(".delivery-product-quantity").value
+        );
+
+        const product = getProducts().find(function (item) {
+            return item.id === productId;
+        });
+
+        if (product && Number.isInteger(quantity) && quantity > 0) {
+            total += product.price * quantity;
+        }
+    });
+
+    newDeliveryTotal.textContent = formatCurrency(total);
+}
+
+
+// Open the create-delivery modal.
+openCreateDeliveryBtn.addEventListener("click", function () {
+    createDeliveryForm.reset();
+    deliveryProductRows.replaceChildren();
+    updateNewDeliveryTotal();
+    createProductRow();
+    createDeliveryModal.showModal();
+});
+
+
+// Add another product to the order.
+addDeliveryProductBtn.addEventListener("click", createProductRow);
+
+
+// Close the modal using either close control.
+function closeCreateDeliveryModal() {
+    createDeliveryModal.close();
+}
+
+closeCreateDeliveryBtn.addEventListener(
+    "click",
+    closeCreateDeliveryModal
+);
+
+cancelCreateDeliveryBtn.addEventListener(
+    "click",
+    closeCreateDeliveryModal
+);
+
+
+// Create and save the order.
+createDeliveryForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    const customerName = deliveryCustomerName.value.trim();
+
+    const rows = Array.from(
+        deliveryProductRows.querySelectorAll(".delivery-product-row")
+    );
+
+    if (!customerName) {
+        showToast("Please enter the customer name.", true);
+        return;
+    }
+
+    if (rows.length === 0) {
+        showToast("Please add at least one product.", true);
+        return;
+    }
+
+    const quantitiesByProduct = new Map();
+
+    for (const row of rows) {
+        const productId = Number(
+            row.querySelector(".delivery-product-select").value
+        );
+
+        const quantityInput =
+            row.querySelector(".delivery-product-quantity");
+
+        const quantity = Number(quantityInput.value);
+
+        if (!productId || !Number.isInteger(quantity) || quantity <= 0) {
+            showToast("Select a product and enter a valid quantity.", true);
+            return;
+        }
+
+        quantitiesByProduct.set(
+            productId,
+            (quantitiesByProduct.get(productId) || 0) + quantity
+        );
+    }
+
+    const products = getProducts();
+
+    // Validate combined quantities, including repeated products.
+    for (const [productId, quantity] of quantitiesByProduct) {
+        const product = products.find(function (item) {
+            return item.id === productId;
+        });
+
+        if (!product || quantity > product.stock) {
+            showToast(
+                "Insufficient stock for " +
+                (product ? product.name : "a selected product") + ".",
+                true
+            );
+            return;
+        }
+    }
+
+    const items = Array.from(
+        quantitiesByProduct,
+        function ([productId, quantity]) {
+            return { productId, quantity };
+        }
+    );
+
+    try {
+        const newOrder = createOrder(customerName, items);
+
+        // Show the new order even if a search or filter was active.
+        searchInput.value = "";
+        statusFilter.value = "All";
+
+        refreshUI();
+        closeCreateDeliveryModal();
+        createDeliveryForm.reset();
+        deliveryProductRows.replaceChildren();
+        updateNewDeliveryTotal();
+
+        showToast("Delivery #" + newOrder.id + " created successfully.");
+    } catch (error) {
+        showToast(error.message || "Unable to create delivery.", true);
+    }
+});
 
     // Initial page load.
     refreshUI();
