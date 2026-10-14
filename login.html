@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | SmartMart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body class="login-page">
+    <main class="login-container">
+        <a class="brand login-brand" href="login.html">
+            <span class="brand-logo">S</span>
+            <span>SmartMart</span>
+        </a>
+
+        <section class="login-card">
+            <div class="login-heading">
+                <p class="eyebrow">STORE MANAGEMENT</p>
+                <h1>Welcome back</h1>
+                <p class="page-description">
+                    Sign in to access your store dashboard.
+                </p>
+            </div>
+
+            <div class="demo-notice">
+                <strong>Demo Mode</strong>
+                <p>Enter any non-empty username and password to continue.</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        placeholder="Enter your username"
+                        autocomplete="username"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Enter any demo password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <p class="form-message" id="loginMessage"
+                   role="alert" aria-live="polite"></p>
+
+                <button type="submit" class="button button-primary button-full">
+                    Sign in
+                </button>
+            </form>
+
+            <p class="login-disclaimer">
+                This is a college project prototype. No real account or secure
+                authentication is used.
+            </p>
+        </section>
+
+        <p class="login-footer">SmartMart · Inventory &amp; Delivery Management</p>
+    </main>
+
+    <script src="js/login.js"></script>
+</body>
+</html>
