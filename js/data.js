@@ -178,5 +178,112 @@ function updateOrderStatus(orderId, status) {
     return order;
 }
 
+// Create an order and deduct the ordered quantities from inventory.
+function createOrder(customerName, items) {
+    if (!customerName || !customerName.trim()) {
+        throw new Error("Customer name is required.");
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+        throw new Error("Please add at least one product.");
+    }
+
+    const products = getProducts();
+    const orders = getOrders();
+
+    // Combine quantities if the same product appears more than once.
+    const quantitiesByProduct = new Map();
+
+    for (const item of items) {
+        if (
+            !Number.isInteger(item.productId) ||
+            !Number.isInteger(item.quantity) ||
+            item.quantity <= 0
+        ) {
+            throw new Error("Invalid product or quantity.");
+        }
+
+        quantitiesByProduct.set(
+            item.productId,
+            (quantitiesByProduct.get(item.productId) || 0) +
+                item.quantity
+        );
+    }
+
+    // Validate every product before changing any stock.
+    const orderItems = [];
+    let total = 0;
+
+    for (const [productId, quantity] of quantitiesByProduct) {
+        const product = products.find(function (item) {
+            return item.id === productId;
+        });
+
+        if (!product) {
+            throw new Error("A selected product was not found.");
+        }
+
+        if (quantity > product.stock) {
+            throw new Error(
+                "Insufficient stock for " + product.name +
+                ". Available stock: " + product.stock
+            );
+        }
+
+        orderItems.push({
+            productId: product.id,
+            quantity: quantity,
+            price: product.price
+        });
+
+        total += product.price * quantity;
+    }
+
+    // Generate a unique order ID.
+    const nextId = orders.length === 0
+        ? 1001
+        : Math.max(...orders.map(order => order.id)) + 1;
+
+    // Get today's date in YYYY-MM-DD format.
+    const today = new Date();
+    const orderDate =
+        today.getFullYear() + "-" +
+        String(today.getMonth() + 1).padStart(2, "0") + "-" +
+        String(today.getDate()).padStart(2, "0");
+
+    const newOrder = {
+        id: nextId,
+        customerName: customerName.trim(),
+        items: orderItems,
+        total: total,
+        status: "Pending",
+        orderDate: orderDate
+    };
+
+    // Deduct stock only after all products have passed validation.
+    for (const [productId, quantity] of quantitiesByProduct) {
+        const product = products.find(
+            item => item.id === productId
+        );
+
+        product.stock -= quantity;
+    }
+
+    // Save the updated inventory and the new order.
+    localStorage.setItem(
+        PRODUCT_STORAGE_KEY,
+        JSON.stringify(products)
+    );
+
+    orders.push(newOrder);
+
+    localStorage.setItem(
+        ORDER_STORAGE_KEY,
+        JSON.stringify(orders)
+    );
+
+    return newOrder;
+}
+
 // Make sure sample data is available when this file loads.
 initializeSampleData();

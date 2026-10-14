@@ -81,6 +81,9 @@
                         <p class="page-description">
                             Manage customer orders and track delivery progress.
                         </p>
+                        <button type="button" class="btn btn-primary" id="openCreateDeliveryBtn">
+                            + New Delivery
+                        </button>
                     </div>
                 </div>
 
@@ -326,6 +329,73 @@
 
         </div>
 
+    </dialog>
+    <!-- Create new delivery modal -->
+    <dialog class="order-modal create-delivery-modal"
+            id="createDeliveryModal"
+            aria-labelledby="createDeliveryTitle">
+
+        <div class="modal-header">
+            <div>
+                <p class="eyebrow">ORDER MANAGEMENT</p>
+                <h2 id="createDeliveryTitle">Create New Delivery</h2>
+                <p class="modal-subtitle">Enter customer and product details.</p>
+            </div>
+
+            <button type="button"
+                    class="modal-close-btn"
+                    id="closeCreateDeliveryBtn"
+                    aria-label="Close create delivery form">
+                &times;
+            </button>
+        </div>
+
+        <form id="createDeliveryForm">
+            <div class="modal-body">
+
+                <div class="create-delivery-field">
+                    <label for="deliveryCustomerName">Customer Name</label>
+                    <input type="text"
+                        id="deliveryCustomerName"
+                        name="customerName"
+                        placeholder="Enter customer name"
+                        maxlength="100"
+                        required>
+                </div>
+
+                <section class="create-delivery-products">
+                    <h3>Products</h3>
+
+                    <div id="deliveryProductRows"></div>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            id="addDeliveryProductBtn">
+                        + Add Product
+                    </button>
+                </section>
+
+                <div class="create-delivery-total">
+                    <span>Order Total</span>
+                    <strong id="newDeliveryTotal">₹0.00</strong>
+                </div>
+
+            </div>
+
+            <div class="create-delivery-actions">
+                <button type="button"
+                        class="btn btn-secondary"
+                        id="cancelCreateDeliveryBtn">
+                    Cancel
+                </button>
+
+                <button type="submit"
+                        class="btn btn-primary"
+                        id="submitCreateDeliveryBtn">
+                    Create Delivery
+                </button>
+            </div>
+        </form>
     </dialog>
 
     <!-- User feedback for status updates and errors -->
