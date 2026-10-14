@@ -1,0 +1,23 @@
+{
+  "name": "smartmart-inventory-delivery-system",
+  "version": "1.0.0",
+  "description": "A group project to develop a supermarket inventory and delivery management system.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Santhosh-M-08/SmartMart-Inventory-Delivery-System.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Santhosh-M-08/SmartMart-Inventory-Delivery-System/issues"
+  },
+  "homepage": "https://github.com/Santhosh-M-08/SmartMart-Inventory-Delivery-System#readme"
+}
+
+
