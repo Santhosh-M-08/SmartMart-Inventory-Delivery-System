@@ -1,0 +1,92 @@
+[
+    {
+        "product_id": 101,
+        "product_name": "Milk",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 82
+    },
+    {
+        "product_id": 102,
+        "product_name": "Bread",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 62
+    },
+    {
+        "product_id": 103,
+        "product_name": "Rice",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 40
+    },
+    {
+        "product_id": 104,
+        "product_name": "Eggs",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 135
+    },
+    {
+        "product_id": 105,
+        "product_name": "Apples",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 28
+    },
+    {
+        "product_id": 106,
+        "product_name": "Cooking Oil",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 24
+    },
+    {
+        "product_id": 107,
+        "product_name": "Sugar",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 41
+    },
+    {
+        "product_id": 108,
+        "product_name": "Tomatoes",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 64
+    },
+    {
+        "product_id": 109,
+        "product_name": "Potatoes",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 64
+    },
+    {
+        "product_id": 110,
+        "product_name": "Bananas",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 50
+    },
+    {
+        "product_id": 111,
+        "product_name": "Biscuits",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 63
+    },
+    {
+        "product_id": 112,
+        "product_name": "Curd",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 36
+    },
+    {
+        "product_id": 113,
+        "product_name": "Tea Powder",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 20
+    },
+    {
+        "product_id": 114,
+        "product_name": "Soft Drink",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 53
+    },
+    {
+        "product_id": 115,
+        "product_name": "Wheat Flour",
+        "prediction_date": "2026-11-01",
+        "predicted_demand": 41
+    }
+]
