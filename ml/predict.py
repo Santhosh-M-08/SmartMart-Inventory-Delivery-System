@@ -1,92 +1,139 @@
 
 import pandas as pd
 import joblib
+import argparse
 from pathlib import Path
 from datetime import timedelta
 
-# Step 1: Locate files
 base_path = Path(__file__).parent
 
-model_path = base_path / "models" / "smartmart_model.joblib"
-data_path = (
-    base_path / "data" /
-    "smartmart_synthetic_sales_12_months.csv"
+# Accept a CSV file from the terminal
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "dataset",
+    nargs="?",
+    default=str(
+        base_path / "data" /
+        "smartmart_synthetic_sales_12_months.csv"
+    )
 )
+args = parser.parse_args()
 
-# Step 2: Load trained ML model
-saved_data = joblib.load(model_path)
+# Load trained model
+saved_data = joblib.load(
+    base_path / "models" / "smartmart_model.joblib"
+)
 
 model = saved_data["model"]
 features = saved_data["features"]
 
-# Step 3: Load sales history
-df = pd.read_csv(data_path)
+# Load reference products used during training
+reference = pd.read_csv(
+    base_path / "data" /
+    "smartmart_synthetic_sales_12_months.csv"
+)
+
+known_products = (
+    reference.groupby("product_id")["product_name"]
+    .first().to_dict()
+)
+
+# Load the selected dataset
+df = pd.read_csv(args.dataset)
+
+required = {
+    "date", "product_id",
+    "product_name", "demand_units"
+}
+
+missing = required - set(df.columns)
+
+if missing:
+    raise ValueError(f"Missing columns: {missing}")
+
 df["date"] = pd.to_datetime(df["date"])
+df["product_id"] = pd.to_numeric(
+    df["product_id"], errors="raise"
+)
+df["demand_units"] = pd.to_numeric(
+    df["demand_units"], errors="raise"
+)
 
-df = df.sort_values(["product_id", "date"])
+if df[list(required)].isna().any().any():
+    raise ValueError("Required fields contain missing values.")
 
-# Step 4: Find the next prediction date
-last_date = df["date"].max()
-next_date = last_date + timedelta(days=1)
+if (df["demand_units"] < 0).any():
+    raise ValueError("Demand cannot be negative.")
 
-print("\nSMARTMART AI DEMAND FORECAST")
-print("Prediction date:", next_date.date())
-print("-" * 65)
+if df.duplicated(["product_id", "date"]).any():
+    raise ValueError("Duplicate product-date records found.")
 
-# Step 5: Predict demand for every product
 results = []
 
 for product_id, product_data in df.groupby("product_id"):
 
     product_data = product_data.sort_values("date")
 
-    # Get the latest 7 days of historical demand
-    history = product_data["demand_units"].tail(7)
+    # Prevent using the model for unfamiliar products
+    if product_id not in known_products:
+        print(f"Skipping unknown product ID: {product_id}")
+        continue
+
+    expected_name = known_products[product_id]
+
+    if not product_data["product_name"].eq(expected_name).all():
+        print(f"Skipping product {product_id}: name mismatch")
+        continue
+
+    history = product_data.tail(7)
 
     if len(history) < 7:
-        print("Skipping product", product_id, "- insufficient history")
+        print(f"Skipping {expected_name}: insufficient history")
         continue
 
-    # Ensure data is recent enough for the prediction date
-    if product_data["date"].max() != last_date:
-        print("Skipping product", product_id, "- missing latest sales date")
+    # Ensure there are no missing days in recent history
+    expected_dates = pd.date_range(
+        end=history["date"].iloc[-1],
+        periods=7,
+        freq="D"
+    )
+
+    if not history["date"].reset_index(drop=True).equals(
+        pd.Series(expected_dates)
+    ):
+        print(f"Skipping {expected_name}: gaps in dates")
         continue
 
-    # Prepare input features
+    next_date = history["date"].iloc[-1] + timedelta(days=1)
+
     input_data = pd.DataFrame([{
         "product_id": product_id,
         "weekday": next_date.dayofweek,
         "month": next_date.month,
         "is_weekend": int(next_date.dayofweek >= 5),
-        "lag_1": history.iloc[-1],
-        "lag_7": history.iloc[0],
-        "rolling_7": history.mean()
+        "lag_1": history["demand_units"].iloc[-1],
+        "lag_7": history["demand_units"].iloc[0],
+        "rolling_7": history["demand_units"].mean()
     }])
 
-    # Match training feature order
-    input_data = input_data[features]
-
-    # Run ML prediction
-    prediction = model.predict(input_data)[0]
-    predicted_units = max(0, round(prediction))
-
-    product_name = product_data["product_name"].iloc[-1]
+    prediction = model.predict(input_data[features])[0]
 
     results.append({
         "product_id": product_id,
-        "product_name": product_name,
-        "predicted_demand": predicted_units
+        "product_name": expected_name,
+        "prediction_date": next_date.date().isoformat(),
+        "predicted_demand": max(0, round(prediction))
     })
 
-# Step 6: Display results
 forecast_df = pd.DataFrame(results)
 
 if forecast_df.empty:
-    print("No predictions generated.")
+    print("No valid products found for prediction.")
 else:
+    print("\nSMARTMART AI DEMAND FORECAST")
+    print("-" * 65)
     print(forecast_df.to_string(index=False))
 
-    # Step 7: Save predictions to CSV
     output_path = base_path / "data" / "predictions.csv"
     forecast_df.to_csv(output_path, index=False)
 
