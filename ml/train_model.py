@@ -1,45 +1,47 @@
 
 import pandas as pd
+import joblib
 from pathlib import Path
+
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
-import joblib
 
+# Step 1: Load dataset
 base_path = Path(__file__).parent
+data_path = base_path / "data" / "smartmart_synthetic_sales_12_months.csv"
 
-# Load dataset
-df = pd.read_csv(
-    base_path / "data" / "smartmart_synthetic_sales_12_months.csv"
+df = pd.read_csv(data_path)
+
+# Step 2: Prepare dates and sort records
+df["date"] = pd.to_datetime(df["date"])
+
+df = df.sort_values(
+    ["product_id", "date"]
+).copy()
+
+# Step 3: Create calendar features
+df["weekday"] = df["date"].dt.dayofweek
+df["month"] = df["date"].dt.month
+df["is_weekend"] = (df["weekday"] >= 5).astype(int)
+
+# Step 4: Create historical demand features
+groups = df.groupby("product_id")["demand_units"]
+
+df["lag_1"] = groups.shift(1)
+df["lag_7"] = groups.shift(7)
+
+df["rolling_7"] = df.groupby("product_id")[
+    "demand_units"
+].transform(
+    lambda values: values.shift(1).rolling(7).mean()
 )
 
-# Select Milk
-milk_data = df[df["product_id"] == 101].copy()
+# Remove rows without sufficient history
+df = df.dropna().copy()
 
-milk_data["date"] = pd.to_datetime(milk_data["date"])
-milk_data = milk_data.sort_values("date")
-
-# Calendar features
-milk_data["weekday"] = milk_data["date"].dt.dayofweek
-milk_data["month"] = milk_data["date"].dt.month
-milk_data["is_weekend"] = (
-    milk_data["weekday"] >= 5
-).astype(int)
-
-# Historical demand features
-milk_data["lag_1"] = milk_data["demand_units"].shift(1)
-milk_data["lag_7"] = milk_data["demand_units"].shift(7)
-
-milk_data["rolling_7"] = (
-    milk_data["demand_units"]
-    .shift(1)
-    .rolling(window=7)
-    .mean()
-)
-
-# Remove rows without enough history
-milk_data = milk_data.dropna()
-
+# Step 5: Select features and target
 features = [
+    "product_id",
     "weekday",
     "month",
     "is_weekend",
@@ -48,47 +50,54 @@ features = [
     "rolling_7"
 ]
 
-X = milk_data[features]
-y = milk_data["demand_units"]
+# Step 6: Split by date, not randomly
+unique_dates = sorted(df["date"].unique())
+split_index = int(len(unique_dates) * 0.8)
+split_date = unique_dates[split_index]
 
-# Chronological train-test split
-split_index = int(len(milk_data) * 0.8)
+train = df[df["date"] < split_date]
+test = df[df["date"] >= split_date]
 
-X_train = X.iloc[:split_index]
-X_test = X.iloc[split_index:]
+X_train = train[features]
+y_train = train["demand_units"]
 
-y_train = y.iloc[:split_index]
-y_test = y.iloc[split_index:]
+X_test = test[features]
+y_test = test["demand_units"]
 
-# Train model
+# Step 7: Train Random Forest
 model = RandomForestRegressor(
     n_estimators=200,
     max_depth=8,
-    random_state=42
+    random_state=42,
+    n_jobs=-1
 )
 
 model.fit(X_train, y_train)
 
-# Predictions
+# Step 8: Evaluate predictions
 predictions = model.predict(X_test)
 
-# Improved baseline: use previous day's demand
-baseline_predictions = X_test["lag_1"]
-
-# Calculate errors
 model_mae = mean_absolute_error(
     y_test, predictions
 )
 
+# Baseline: same weekday last week
 baseline_mae = mean_absolute_error(
-    y_test, baseline_predictions
+    y_test, X_test["lag_7"]
 )
 
-print("Improved ML Model MAE:", round(model_mae, 2))
-print("Previous-Day Baseline MAE:", round(baseline_mae, 2))
+print("SMARTMART ML TRAINING RESULTS")
+print("-----------------------------")
+print("Products:", df["product_id"].nunique())
+print("Training records:", len(train))
+print("Testing records:", len(test))
+print("Model MAE:", round(model_mae, 2))
+print("Baseline MAE:", round(baseline_mae, 2))
 
-# Save model with feature names
-model_path = base_path / "models" / "milk_model.joblib"
+# Step 9: Save model
+model_path = base_path / "models" / "smartmart_model.joblib"
+
+model_path.parent.mkdir(parents=True, exist_ok=True)
 
 joblib.dump(
     {
@@ -98,4 +107,4 @@ joblib.dump(
     model_path
 )
 
-print("Improved model saved successfully!")
+print("Model saved successfully!")
