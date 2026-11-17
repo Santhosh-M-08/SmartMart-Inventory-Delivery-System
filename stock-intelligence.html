@@ -1,407 +1,251 @@
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1">
-  <title>Stock Intelligence | SmartMart</title>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-  <style>
-    :root {
-      font-family: Inter, Arial, sans-serif;
-      color: #1f2937;
-      background: #f8fafc;
-    }
+    <title>Stock Intelligence | SmartMart</title>
 
-    * { box-sizing: border-box; }
-
-    body { margin: 0; }
-
-    header {
-      background: #166534;
-      color: white;
-      padding: 22px 6%;
-    }
-
-    header h1 { margin: 0 0 8px; }
-
-    header p { margin: 0; opacity: .9; }
-
-    main {
-      max-width: 1200px;
-      margin: 28px auto;
-      padding: 0 20px;
-    }
-
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-
-    button, .back-link {
-      background: #166534;
-      color: white;
-      border: 0;
-      border-radius: 8px;
-      padding: 11px 16px;
-      cursor: pointer;
-      font: inherit;
-      text-decoration: none;
-    }
-
-    button:hover, .back-link:hover {
-      background: #15803d;
-    }
-
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(
-        auto-fit, minmax(180px, 1fr)
-      );
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .card, .table-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 20px;
-    }
-
-    .card span {
-      color: #64748b;
-      font-size: 14px;
-    }
-
-    .card strong {
-      display: block;
-      font-size: 30px;
-      margin-top: 8px;
-    }
-
-    .table-card { overflow-x: auto; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-
-    th, td {
-      padding: 14px 12px;
-      border-bottom: 1px solid #e2e8f0;
-      white-space: nowrap;
-    }
-
-    th {
-      color: #64748b;
-      font-size: 13px;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .critical {
-      background: #fee2e2;
-      color: #dc2626;
-    }
-
-    .warning {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    .healthy {
-      background: #dcfce7;
-      color: #15803d;
-    }
-
-    .unavailable {
-      background: #f1f5f9;
-      color: #64748b;
-    }
-
-    .notice {
-      color: #64748b;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    #message { color: #b91c1c; }
-  </style>
+    <link rel="stylesheet"
+          href="css/stock-intelligence.css">
 </head>
 
 <body>
-  <header>
-    <h1>SmartMart AI Stock Intelligence</h1>
-    <p>
-      Machine Learning Demand Forecasting
-      & Inventory Recommendations
-    </p>
-  </header>
 
-  <main>
-    <div class="toolbar">
-      <a href="inventory.html" class="back-link">
-        Back to Inventory
-      </a>
+    <div class="app-layout">
 
-      <button id="refreshBtn" type="button">
-        Refresh Stock
-      </button>
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="sidebar-brand">
+                <span class="brand-logo">S</span>
+                <span>SmartMart</span>
+            </div>
+
+            <p class="sidebar-label">MAIN MENU</p>
+
+            <nav class="sidebar-nav">
+
+                <a href="index.html">
+                    Dashboard
+                </a>
+
+                <a href="inventory.html">
+                    Inventory
+                </a>
+
+                <a href="delivery.html">
+                    Orders &amp; Delivery
+                </a>
+
+                <a href="stock-intelligence.html"
+                   class="active"
+                   aria-current="page">
+                    AI Stock Intelligence
+                </a>
+
+            </nav>
+
+            <div class="sidebar-user">
+                <strong>Store Manager</strong>
+                <small>SmartMart Admin</small>
+            </div>
+
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+
+            <!-- HEADER -->
+            <header>
+                <h1>SmartMart AI Stock Intelligence</h1>
+
+                <p>
+                    Machine Learning Demand Forecasting
+                    &amp; Inventory Recommendations
+                </p>
+            </header>
+
+            <main>
+
+                <!-- TOOLBAR -->
+                <div class="toolbar">
+
+                    <a href="inventory.html"
+                       class="back-link">
+                        Back to Inventory
+                    </a>
+
+                    <button id="refreshBtn" type="button">
+                        Refresh Stock
+                    </button>
+
+                </div>
+
+                <!-- INFORMATION -->
+                <p class="notice">
+                    Demonstration forecasts trained on synthetic
+                    sales data. Stock quantities come from this
+                    browser's SmartMart inventory.
+                    Product mappings are provisional.
+                </p>
+
+                <p id="forecastDate"></p>
+
+                <p id="message" role="alert"
+                   aria-live="polite"></p>
+
+                <!-- SUMMARY CARDS -->
+                <section class="stats"
+                         aria-label="Inventory summary">
+
+                    <div class="card">
+                        <span>Inventory Products</span>
+                        <strong id="total">0</strong>
+                    </div>
+
+                    <div class="card">
+                        <span>Critical</span>
+                        <strong id="critical">0</strong>
+                    </div>
+
+                    <div class="card">
+                        <span>Warning</span>
+                        <strong id="warning">0</strong>
+                    </div>
+
+                    <div class="card">
+                        <span>Healthy</span>
+                        <strong id="healthy">0</strong>
+                    </div>
+
+                </section>
+
+                <!-- INVENTORY ANALYSIS -->
+                <section class="table-card">
+
+                    <h2>AI Inventory Analysis</h2>
+
+                    <!-- SEARCH, FILTER AND SORT -->
+                    <div class="filter-bar">
+
+                        <input
+                            type="search"
+                            id="productSearch"
+                            placeholder="Search products..."
+                            aria-label="Search products"
+                        >
+
+                        <select id="riskFilter"
+                                aria-label="Filter by risk">
+
+                            <option value="all">
+                                All Risk Levels
+                            </option>
+
+                            <option value="Critical">
+                                Critical
+                            </option>
+
+                            <option value="Warning">
+                                Warning
+                            </option>
+
+                            <option value="Healthy">
+                                Healthy
+                            </option>
+
+                            <option value="Forecast Unavailable">
+                                Forecast Unavailable
+                            </option>
+
+                        </select>
+
+                        <!-- SORTING DROPDOWN -->
+                        <select id="sortFilter"
+                                aria-label="Sort inventory">
+
+                            <option value="risk">
+                                Highest Risk First
+                            </option>
+
+                            <option value="days">
+                                Fewest Days Left
+                            </option>
+
+                            <option value="name">
+                                Product Name (A–Z)
+                            </option>
+
+                            <option value="demand">
+                                Highest Demand First
+                            </option>
+
+                        </select>
+
+                        <button id="clearFiltersBtn"
+                                type="button">
+                            Clear Filters
+                        </button>
+
+                    </div>
+
+                    <!-- FILTERED PRODUCT COUNT -->
+                    <p id="filterCount" class="notice"
+                       aria-live="polite"></p>
+
+                    <!-- INVENTORY TABLE -->
+                    <div class="table-responsive">
+
+                        <table>
+
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Current Stock</th>
+                                    <th>Predicted Demand</th>
+                                    <th>Days Left</th>
+                                    <th>Risk</th>
+                                    <th>Reorder Units</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="stockTable">
+                                <!-- Generated by JavaScript -->
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    <!-- EMPTY FILTER RESULT -->
+                    <p id="emptyFilterMessage"
+                       class="notice"
+                       hidden>
+                        No products match the selected filters.
+                    </p>
+
+                </section>
+
+                <!-- FORECAST DISCLAIMER -->
+                <p class="notice">
+                    Stock coverage assumes constant daily demand
+                    and no incoming replenishment.
+                    Forecasts are estimates, not guaranteed sales.
+                </p>
+
+            </main>
+
+        </div>
+        <!-- END MAIN CONTENT -->
+
     </div>
+    <!-- END APP LAYOUT -->
 
-    <p class="notice">
-      Demonstration forecasts trained on synthetic sales
-      data. Stock quantities come from this browser's
-      SmartMart inventory. Product mappings are provisional.
-    </p>
+    <script src="js/stock-intelligence.js"></script>
 
-    <p id="forecastDate"></p>
-    <p id="message" role="alert"></p>
-
-    <section class="stats">
-      <div class="card">
-        <span>Inventory Products</span>
-        <strong id="total">0</strong>
-      </div>
-
-      <div class="card">
-        <span>Critical</span>
-        <strong id="critical">0</strong>
-      </div>
-
-      <div class="card">
-        <span>Warning</span>
-        <strong id="warning">0</strong>
-      </div>
-
-      <div class="card">
-        <span>Healthy</span>
-        <strong id="healthy">0</strong>
-      </div>
-    </section>
-
-    <section class="table-card">
-      <h2>AI Inventory Analysis</h2>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Current Stock</th>
-            <th>Predicted Demand</th>
-            <th>Days Left</th>
-            <th>Risk</th>
-            <th>Reorder Units</th>
-          </tr>
-        </thead>
-
-        <tbody id="stockTable"></tbody>
-      </table>
-    </section>
-  </main>
-
-  <script>
-    const STORAGE_KEY = "smartmart_products";
-
-    // Two days for delivery, two days of safety stock.
-    const LEAD_TIME = 2;
-    const SAFETY_DAYS = 2;
-
-    let forecasts = [];
-    let mapping = {};
-
-    const el = id => document.getElementById(id);
-
-    function cell(row, value) {
-      const td = document.createElement("td");
-      td.textContent = String(value);
-      row.appendChild(td);
-      return td;
-    }
-
-    function loadInventory() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-
-      if (raw === null) {
-        throw new Error(
-          "No SmartMart inventory found in this browser."
-        );
-      }
-
-      const products = JSON.parse(raw);
-
-      if (!Array.isArray(products)) {
-        throw new Error("Invalid inventory data.");
-      }
-
-      return products;
-    }
-
-    function analyzeProduct(product) {
-      const mlId = mapping[String(product.id)];
-
-      const forecast = forecasts.find(
-        f => Number(f.product_id) === Number(mlId)
-      );
-
-      if (!forecast || !Number.isFinite(
-        Number(product.stock)
-      ) || Number(product.stock) < 0) {
-        return null;
-      }
-
-      const stock = Number(product.stock);
-      const demand = Number(forecast.predicted_demand);
-
-      if (!Number.isFinite(demand) || demand < 0) {
-        return null;
-      }
-
-      const daysLeft = demand === 0
-        ? Infinity
-        : stock / demand;
-
-      let status = "Healthy";
-
-      if (daysLeft <= 1) {
-        status = "Critical";
-      } else if (daysLeft <= 3) {
-        status = "Warning";
-      }
-
-      const reorder = Math.max(
-        0,
-        Math.ceil(
-          demand * (LEAD_TIME + SAFETY_DAYS)
-          - stock
-        )
-      );
-
-      return { stock, demand, daysLeft, status, reorder };
-    }
-
-    function renderDashboard() {
-      const products = loadInventory();
-
-      const tbody = el("stockTable");
-      tbody.replaceChildren();
-
-      let critical = 0;
-      let warning = 0;
-      let healthy = 0;
-
-      for (const product of products) {
-        const result = analyzeProduct(product);
-
-        const row = document.createElement("tr");
-
-        cell(row, product.name);
-        cell(row, product.stock);
-
-        if (result === null) {
-          cell(row, "N/A");
-          cell(row, "N/A");
-
-          const statusCell = cell(row, "");
-          const badge = document.createElement("span");
-
-          badge.className = "badge unavailable";
-          badge.textContent = "Forecast Unavailable";
-          statusCell.appendChild(badge);
-
-          cell(row, "N/A");
-        } else {
-          cell(row, result.demand);
-
-          cell(
-            row,
-            Number.isFinite(result.daysLeft)
-              ? result.daysLeft.toFixed(2)
-              : "Unlimited*"
-          );
-
-          const statusCell = cell(row, "");
-          const badge = document.createElement("span");
-
-          badge.className =
-            "badge " + result.status.toLowerCase();
-          badge.textContent = result.status;
-          statusCell.appendChild(badge);
-
-          cell(row, result.reorder);
-
-          if (result.status === "Critical") critical++;
-          if (result.status === "Warning") warning++;
-          if (result.status === "Healthy") healthy++;
-        }
-
-        tbody.appendChild(row);
-      }
-
-      el("total").textContent = products.length;
-      el("critical").textContent = critical;
-      el("warning").textContent = warning;
-      el("healthy").textContent = healthy;
-    }
-
-    async function initialize() {
-      try {
-        el("message").textContent = "";
-
-        const [forecastResponse, mappingResponse] =
-          await Promise.all([
-            fetch("ml/data/forecasts.json"),
-            fetch("ml/product_mapping.json")
-          ]);
-
-        if (!forecastResponse.ok || !mappingResponse.ok) {
-          throw new Error(
-            "Could not load ML forecast or product mapping."
-          );
-        }
-
-        forecasts = await forecastResponse.json();
-        mapping = await mappingResponse.json();
-
-        if (!Array.isArray(forecasts)) {
-          throw new Error("Invalid forecast file.");
-        }
-
-        const dates = [
-          ...new Set(
-            forecasts.map(f => f.prediction_date)
-          )
-        ];
-
-        el("forecastDate").textContent =
-          "Forecast date: " + dates.join(", ")
-          + " (historical demonstration)";
-
-        renderDashboard();
-      } catch (error) {
-        el("message").textContent = error.message;
-      }
-    }
-
-    el("refreshBtn").addEventListener(
-      "click",
-      initialize
-    );
-
-    initialize();
-  </script>
 </body>
 </html>
