@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartMart | Expiry Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/expiry.css">
+</head>
+<body>
+    <div class="app-shell">
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <aside class="sidebar" id="sidebar">
+            <a class="brand" href="index.html">
+                <span class="brand-mark">S</span>
+                <span>SmartMart</span>
+            </a>
+
+            <p class="nav-heading">WORKSPACE</p>
+            <nav class="sidebar-nav" aria-label="Main navigation">
+                <a class="nav-link" href="index.html">
+                    <span class="nav-icon">▦</span> Dashboard
+                </a>
+                <a class="nav-link" href="inventory.html">
+                    <span class="nav-icon">▤</span> Inventory
+                </a>
+                <a class="nav-link" href="delivery.html">
+                    <span class="nav-icon">⇄</span> Orders &amp; Delivery
+                </a>
+                <a class="nav-link active" href="expiry.html" aria-current="page">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M12 13v3M12 18.5v.01"/></svg></span> Expiry Management
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="sidebar-note">
+                    <span class="note-dot"></span>
+                    <div>
+                        <strong>SmartMart system</strong>
+                        <span>Local demo mode</span>
+                    </div>
+                </div>
+                <button class="logout-button" id="logoutButton" type="button">
+                    <span class="nav-icon">↪</span> Logout
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">☰</button>
+                    <div>
+                        <p class="eyebrow">SMARTMART MANAGEMENT</p>
+                        <h1>Expiry Management</h1>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <div class="exp-bell" id="expBell"></div>
+                    <div class="date-display">
+                        <span class="date-icon">▦</span>
+                        <span id="currentDate">Loading date...</span>
+                    </div>
+                    <div class="user-avatar" aria-label="Demo user">SM</div>
+                </div>
+            </header>
+
+            <div class="dashboard-content exp" id="expApp">
+
+                <div class="exp-banner exp-banner--warn" id="previewBanner" hidden>
+                    <span id="previewBannerText"></span>
+                    <button type="button" class="exp-btn exp-btn--small" id="previewBannerReset">Use today's real date</button>
+                </div>
+                <div class="exp-banner" id="sampleBanner" hidden>
+                    <span>Sample data is loaded for demonstration. Your own batches are marked <strong>Actual</strong>; sample ones are marked <strong>Sample</strong>.</span>
+                    <button type="button" class="exp-btn exp-btn--small" id="sampleBannerClear">Clear sample data</button>
+                </div>
+
+                <nav class="exp-tabs" role="tablist" aria-label="Expiry Management sections">
+                    <button type="button" class="exp-tab" role="tab" data-tab="overview">Overview</button>
+                    <button type="button" class="exp-tab" role="tab" data-tab="batches">Batches</button>
+                    <button type="button" class="exp-tab" role="tab" data-tab="settings">Discount Settings</button>
+                    <button type="button" class="exp-tab" role="tab" data-tab="notifications">Notifications <span class="exp-count" id="tabUnread" hidden>0</span></button>
+                    <button type="button" class="exp-tab" role="tab" data-tab="shop">Customer Preview</button>
+                </nav>
+
+                <!-- ============ OVERVIEW ============ -->
+                <section class="exp-pane" id="pane-overview" role="tabpanel" hidden>
+                    <div class="exp-alerts" id="alertsBox" aria-live="polite"></div>
+
+                    <p class="exp-group-label">Stock right now</p>
+                    <div class="exp-cards" id="liveCards">
+                        <div class="exp-card is-skeleton"></div><div class="exp-card is-skeleton"></div>
+                        <div class="exp-card is-skeleton"></div><div class="exp-card is-skeleton"></div>
+                    </div>
+
+                    <div class="exp-section-head">
+                        <div>
+                            <h2>Food Waste Prevention</h2>
+                            <p id="analyticsNote">Counts only batches whose expiry date has passed.</p>
+                        </div>
+                        <div class="exp-seg" role="group" aria-label="Data scope">
+                            <button type="button" data-scope="all" class="is-active">Sample + actual</button>
+                            <button type="button" data-scope="actual">Actual only</button>
+                        </div>
+                    </div>
+                    <div class="exp-cards" id="analyticsCards">
+                        <div class="exp-card is-skeleton"></div><div class="exp-card is-skeleton"></div>
+                        <div class="exp-card is-skeleton"></div><div class="exp-card is-skeleton"></div>
+                    </div>
+
+                    <div class="exp-chart-grid">
+                        <section class="exp-panel"><div class="exp-panel-head"><div><h3>Products saved from expiry</h3><p>Units sold with a discount before expiry, by month</p></div></div><div class="exp-panel-body exp-chart" id="chartSaved"></div></section>
+                        <section class="exp-panel"><div class="exp-panel-head"><div><h3>Expired products</h3><p>Units that expired unsold, by month</p></div></div><div class="exp-panel-body exp-chart" id="chartExpired"></div></section>
+                        <section class="exp-panel"><div class="exp-panel-head"><div><h3>Discounted sales performance</h3><p>Revenue and discount given (₹), by month</p></div></div><div class="exp-panel-body exp-chart" id="chartSales"></div></section>
+                        <section class="exp-panel"><div class="exp-panel-head"><div><h3>Waste reduction trend</h3><p>Saved ÷ (saved + expired), by month</p></div></div><div class="exp-panel-body exp-chart" id="chartTrend"></div></section>
+                    </div>
+
+                    <section class="exp-panel">
+                        <div class="exp-panel-head">
+                            <div><h3>Smart waste prevention suggestions</h3><p>Based on remaining stock, days left and average daily sales</p></div>
+                        </div>
+                        <div class="exp-suggest-list" id="suggestions"></div>
+                        <p class="exp-help" style="padding:0 20px 16px;margin:0">Suggestions are estimates from recent sales, not guarantees. Review each one before changing a discount.</p>
+                    </section>
+                </section>
+
+                <!-- ============ BATCHES ============ -->
+                <section class="exp-pane" id="pane-batches" role="tabpanel" hidden>
+                    <div class="exp-section-head">
+                        <div><h2>Expiry Product Management</h2><p id="tableCount">Every batch is tracked separately.</p></div>
+                        <button type="button" class="exp-btn exp-btn--primary" id="addBatchBtn">+ Add batch</button>
+                    </div>
+                    <section class="exp-panel">
+                        <div class="exp-toolbar">
+                            <div class="exp-field exp-field--grow"><label for="fSearch">Search by product name</label><input type="search" id="fSearch" placeholder="e.g. Milk, Bread…" autocomplete="off"></div>
+                            <div class="exp-field"><label for="fCategory">Category</label><select id="fCategory"></select></div>
+                            <div class="exp-field"><label for="fExpiry">Expiry status</label>
+                                <select id="fExpiry">
+                                    <option value="all">All statuses</option><option value="safe">Safe</option><option value="approaching">Approaching Expiry</option>
+                                    <option value="discount">Discount Active</option><option value="today">Expiring Today</option><option value="expired">Expired</option>
+                                </select></div>
+                            <div class="exp-field"><label for="fDiscount">Discount status</label>
+                                <select id="fDiscount">
+                                    <option value="all">All</option><option value="active">Active</option><option value="scheduled">Scheduled</option>
+                                    <option value="none">Not applied</option><option value="disabled">Disabled</option><option value="ended">Ended</option>
+                                </select></div>
+                            <div class="exp-field"><label for="fSource">Data</label>
+                                <select id="fSource"><option value="all">Sample + actual</option><option value="actual">Actual only</option><option value="sample">Sample only</option></select></div>
+                            <div class="exp-field"><label for="fSort">Sort</label>
+                                <select id="fSort"><option value="nearest">Nearest expiry first</option><option value="farthest">Farthest expiry first</option><option value="name">Product name</option><option value="qty">Quantity (high to low)</option></select></div>
+                            <button type="button" class="exp-btn" id="fClear">Clear filters</button>
+                        </div>
+                        <div class="exp-table-wrap">
+                            <table class="exp-table">
+                                <thead><tr>
+                                    <th>Image</th><th>Product</th><th>Batch</th><th>Category</th><th class="num">Qty</th><th class="num">Original</th>
+                                    <th class="num">Discount</th><th class="num">Discounted</th><th>Expiry date</th><th>Days remaining</th>
+                                    <th>Expiry status</th><th>Discount status</th><th>Actions</th>
+                                </tr></thead>
+                                <tbody id="batchRows"><tr><td colspan="13" class="exp-empty">Loading batches…</td></tr></tbody>
+                            </table>
+                        </div>
+                        <div class="exp-empty" id="batchEmpty" hidden></div>
+                    </section>
+                </section>
+
+                <!-- ============ SETTINGS ============ -->
+                <section class="exp-pane" id="pane-settings" role="tabpanel" hidden>
+                    <div class="exp-settings-grid">
+                        <section class="exp-panel">
+                            <div class="exp-panel-head"><div><h3>Automatic expiry discount</h3><p>Applies to every batch unless you override it on the Batches tab.</p></div></div>
+                            <div class="exp-panel-body">
+                                <form id="settingsForm" novalidate>
+                                    <label class="exp-check" style="margin-bottom:16px"><input type="checkbox" id="sEnabled"> Enable automatic expiry discounts</label>
+                                    <div class="exp-settings-row">
+                                        <div class="exp-field" id="sDaysField">
+                                            <label for="sDaysSelect">Discount activation (days before expiry)</label>
+                                            <select id="sDaysSelect">
+                                                <option value="3">3 days before expiry</option><option value="4">4 days before expiry</option>
+                                                <option value="5">5 days before expiry</option><option value="custom">Custom…</option>
+                                            </select>
+                                            <input type="number" id="sDaysCustom" min="1" max="60" step="1" placeholder="Number of days" hidden>
+                                            <small class="exp-error" id="eDays"></small>
+                                        </div>
+                                        <div class="exp-field" id="sPctField">
+                                            <label for="sPct">Discount percentage (%)</label>
+                                            <input type="number" id="sPct" min="1" max="90" step="1" inputmode="decimal">
+                                            <small class="exp-error" id="ePct"></small>
+                                        </div>
+                                        <div class="exp-field" id="sWarnField">
+                                            <label for="sWarn">Early warning (days before expiry)</label>
+                                            <input type="number" id="sWarn" min="1" max="90" step="1">
+                                            <small class="exp-help">Batches inside this window show “Approaching Expiry”.</small>
+                                            <small class="exp-error" id="eWarn"></small>
+                                        </div>
+                                    </div>
+                                    <div class="exp-form-actions">
+                                        <button type="submit" class="exp-btn exp-btn--primary" id="sSave">Save settings</button>
+                                        <button type="button" class="exp-btn" id="sReset">Reset to default</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </section>
+
+                        <div>
+                            <section class="exp-preview" id="settingsPreview" aria-live="polite"></section>
+                        </div>
+                    </div>
+
+                    <section class="exp-panel" style="margin-top:20px">
+                        <div class="exp-panel-head"><div><h3>Testing &amp; demo tools</h3><p>For demonstrations only. These do not change real expiry dates.</p></div></div>
+                        <div class="exp-panel-body">
+                            <div class="exp-settings-row">
+                                <div class="exp-field">
+                                    <label for="tDate">Pretend today is…</label>
+                                    <input type="date" id="tDate">
+                                    <small class="exp-help">Watch discounts switch on and products expire.</small>
+                                </div>
+                                <div class="exp-field" style="justify-content:flex-end">
+                                    <div class="exp-form-actions" style="margin-top:0">
+                                        <button type="button" class="exp-btn" id="tApply">Apply date</button>
+                                        <button type="button" class="exp-btn" id="tReset">Use real date</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="exp-form-actions">
+                                <button type="button" class="exp-btn" id="tReloadSample">Reload sample batches</button>
+                                <button type="button" class="exp-btn exp-btn--danger" id="tClearSample">Clear sample data</button>
+                            </div>
+                        </div>
+                    </section>
+                </section>
+
+                <!-- ============ NOTIFICATIONS ============ -->
+                <section class="exp-pane" id="pane-notifications" role="tabpanel" hidden>
+                    <div class="exp-section-head">
+                        <div><h2>All notifications</h2><p>Each expiry event is raised once per batch.</p></div>
+                        <div class="exp-form-actions" style="margin:0">
+                            <div class="exp-seg" role="group" aria-label="Filter notifications">
+                                <button type="button" data-nf="all" class="is-active">All</button>
+                                <button type="button" data-nf="unread">Unread</button>
+                            </div>
+                            <button type="button" class="exp-btn" id="nfMarkAll">Mark all as read</button>
+                        </div>
+                    </div>
+                    <section class="exp-panel exp-ntf-page"><div id="nfList"></div></section>
+                </section>
+
+                <!-- ============ CUSTOMER PREVIEW ============ -->
+                <section class="exp-pane" id="pane-shop" role="tabpanel" hidden>
+                    <div class="exp-section-head">
+                        <div><h2>Customer shopping preview</h2><p>How discounted items appear to customers. The cart stores only product and quantity; prices are re-validated at checkout.</p></div>
+                    </div>
+                    <div class="exp-shop">
+                        <div class="exp-product-grid" id="shopGrid"></div>
+                        <aside class="exp-cart" aria-label="Shopping cart">
+                            <h3>Your cart</h3>
+                            <div id="cartLines"></div>
+                            <div class="exp-cart-total"><span>Total</span><span id="cartTotal">₹0</span></div>
+                            <div class="exp-field"><label for="cartName">Customer name</label><input type="text" id="cartName" maxlength="100" placeholder="Enter customer name" autocomplete="off"></div>
+                            <button type="button" class="exp-btn exp-btn--primary" id="checkoutBtn" style="width:100%">Checkout</button>
+                            <p class="exp-help" style="margin:8px 0 0">Checkout creates an order in Orders &amp; Delivery.</p>
+                        </aside>
+                    </div>
+                </section>
+
+                <footer class="page-footer">
+                    <span>SmartMart Inventory &amp; Delivery Management</span>
+                    <span>Expiry Management · Local demo</span>
+                </footer>
+            </div>
+        </main>
+    </div>
+
+    <!-- details -->
+    <dialog class="exp-dialog" id="detailDialog" aria-labelledby="detailTitle">
+        <h2 id="detailTitle">Batch details</h2>
+        <p class="exp-sub" id="detailSub"></p>
+        <div id="detailBody"></div>
+        <div class="exp-dialog-actions"><button type="button" class="exp-btn" data-close="detailDialog">Close</button></div>
+    </dialog>
+
+    <!-- manage discount -->
+    <dialog class="exp-dialog" id="discountDialog" aria-labelledby="discountTitle">
+        <form id="discountForm" novalidate>
+            <h2 id="discountTitle">Manage discount</h2>
+            <p class="exp-sub" id="discountSub"></p>
+            <label class="exp-radio"><input type="radio" name="dMode" value="auto"><span>Automatic<small id="dAutoText"></small></span></label>
+            <label class="exp-radio"><input type="radio" name="dMode" value="custom"><span>Custom discount for this batch<small>Use a different percentage for this batch only.</small></span></label>
+            <div id="dCustomBox" hidden style="margin:0 0 8px 4px">
+                <div class="exp-field"><label for="dPct">Discount percentage (%)</label><input type="number" id="dPct" min="1" max="90" step="1"><small class="exp-error" id="eDPct"></small></div>
+                <label class="exp-check" style="margin-bottom:8px"><input type="checkbox" id="dNow"> Apply now (do not wait for the activation date)</label>
+            </div>
+            <label class="exp-radio"><input type="radio" name="dMode" value="none"><span>No discount for this batch<small>Sell at the original price until it expires.</small></span></label>
+            <div class="exp-dialog-actions">
+                <button type="button" class="exp-btn" data-close="discountDialog">Cancel</button>
+                <button type="submit" class="exp-btn exp-btn--primary">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- add batch -->
+    <dialog class="exp-dialog" id="batchDialog" aria-labelledby="batchTitle">
+        <form id="batchForm" novalidate>
+            <h2 id="batchTitle">Add batch</h2>
+            <p class="exp-sub">Record a delivery of a product with its own expiry date. Product stock in Inventory is not changed.</p>
+            <div class="exp-field"><label for="bProduct">Product *</label><select id="bProduct"></select><small class="exp-error" id="eBProduct"></small></div>
+            <div class="exp-settings-row">
+                <div class="exp-field"><label for="bNo">Batch number *</label><input type="text" id="bNo" maxlength="20" autocomplete="off"><small class="exp-error" id="eBNo"></small></div>
+                <div class="exp-field"><label for="bQty">Quantity *</label><input type="number" id="bQty" min="1" step="1"><small class="exp-error" id="eBQty"></small></div>
+            </div>
+            <div class="exp-field"><label for="bDate">Expiry date *</label><input type="date" id="bDate"><small class="exp-error" id="eBDate"></small></div>
+            <div class="exp-dialog-actions">
+                <button type="button" class="exp-btn" data-close="batchDialog">Cancel</button>
+                <button type="submit" class="exp-btn exp-btn--primary">Save batch</button>
+            </div>
+        </form>
+    </dialog>
+
+    <div class="exp-toast" id="expToast" role="status" aria-live="polite" hidden></div>
+
+    <script src="js/data.js"></script>
+    <script src="js/expiry-core.js"></script>
+    <script src="js/expiry-bell.js"></script>
+    <script src="js/expiry.js"></script>
+</body>
+</html>

@@ -1,4 +1,3 @@
-
 const PRODUCT_STORAGE_KEY = "smartmart_products";
 const ORDER_STORAGE_KEY = "smartmart_orders";
 
@@ -212,6 +211,7 @@ function createOrder(customerName, items) {
 
     // Validate every product before changing any stock.
     const orderItems = [];
+    const expiryQuotes = [];
     let total = 0;
 
     for (const [productId, quantity] of quantitiesByProduct) {
@@ -230,13 +230,36 @@ function createOrder(customerName, items) {
             );
         }
 
-        orderItems.push({
-            productId: product.id,
-            quantity: quantity,
-            price: product.price
-        });
+        // Expiry-aware pricing (js/expiry-core.js). The unit price is always
+        // calculated here from batch data. A price sent by the browser is never used.
+        const expiryQuote = (typeof SmartMartExpiry !== "undefined")
+            ? SmartMartExpiry.quoteSale(product, quantity)
+            : null;
 
-        total += product.price * quantity;
+        if (expiryQuote && !expiryQuote.ok) {
+            throw new Error(expiryQuote.error);
+        }
+
+        if (expiryQuote) {
+            expiryQuote.items.forEach(function (line) {
+                orderItems.push({
+                    productId: line.productId,
+                    quantity: line.quantity,
+                    price: line.price
+                });
+            });
+
+            total += expiryQuote.total;
+            expiryQuotes.push({ productId: product.id, lines: expiryQuote.lines });
+        } else {
+            orderItems.push({
+                productId: product.id,
+                quantity: quantity,
+                price: product.price
+            });
+
+            total += product.price * quantity;
+        }
     }
 
     // Generate a unique order ID.
@@ -255,7 +278,7 @@ function createOrder(customerName, items) {
         id: nextId,
         customerName: customerName.trim(),
         items: orderItems,
-        total: total,
+        total: Math.round(total * 100) / 100,
         status: "Pending",
         orderDate: orderDate
     };
@@ -281,6 +304,13 @@ function createOrder(customerName, items) {
         ORDER_STORAGE_KEY,
         JSON.stringify(orders)
     );
+
+    // Reduce batch quantities and record discounted sales for expiry analytics.
+    if (typeof SmartMartExpiry !== "undefined") {
+        expiryQuotes.forEach(function (entry) {
+            SmartMartExpiry.recordSale(entry.productId, entry.lines, newOrder.id, orderDate);
+        });
+    }
 
     return newOrder;
 }
