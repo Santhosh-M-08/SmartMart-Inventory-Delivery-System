@@ -445,14 +445,25 @@ function createProductRow() {
     products.forEach(function (product) {
         const option = document.createElement("option");
         option.value = String(product.id);
+        // Show the expiry-discounted price when one applies (js/expiry-core.js).
+        const offer = (typeof SmartMartExpiry !== "undefined")
+            ? SmartMartExpiry.getProductOffer(product)
+            : null;
+
         option.textContent =
             product.name + " — " +
-            formatCurrency(product.price) +
+            formatCurrency(offer ? offer.unitPrice : product.price) +
+            (offer && offer.hasDiscount
+                ? " (" + offer.discountPct + "% OFF, was " + formatCurrency(offer.basePrice) + ")"
+                : "") +
             " (Stock: " + product.stock + ")";
 
         if (product.stock <= 0) {
             option.disabled = true;
             option.textContent += " — Out of stock";
+        } else if (offer && !offer.available) {
+            option.disabled = true;
+            option.textContent += " — " + offer.reason;
         }
 
         productSelect.appendChild(option);
@@ -523,7 +534,13 @@ function updateNewDeliveryTotal() {
         });
 
         if (product && Number.isInteger(quantity) && quantity > 0) {
-            total += product.price * quantity;
+            const quote = (typeof SmartMartExpiry !== "undefined")
+                ? SmartMartExpiry.quoteSale(product, quantity)
+                : null;
+
+            total += quote && quote.ok
+                ? quote.total
+                : product.price * quantity;
         }
     });
 
