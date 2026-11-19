@@ -325,3 +325,36 @@ app.listen(PORT, () => {
         `SmartMart API running on http://localhost:${PORT}`
     );
 });
+
+
+ // ------------------------------------------
+ // GET ML PREDICTIONS FROM SQLITE
+ // ------------------------------------------
+
+app.get("/api/predictions", (req, res) => {
+    try {
+        const predictions = db.prepare(`
+            SELECT
+                p.product_id,
+                pr.name AS product_name,
+                p.prediction_date,
+                p.predicted_demand
+            FROM predictions p
+            JOIN products pr
+                ON pr.id = p.product_id
+            ORDER BY p.product_id
+        `).all();
+
+        return res.json(predictions);
+
+    } catch (error) {
+        console.error(
+            "Error fetching predictions:",
+            error.message
+        );
+
+        return res.status(500).json({
+            error: "Unable to retrieve ML predictions."
+        });
+    }
+});
