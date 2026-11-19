@@ -541,45 +541,133 @@ const ORDER_STATUSES = [
     "Cancelled"
 ];
 
+
 app.put("/api/orders/:id/status", (req, res) => {
+    const orderId = Number(req.params.id);
+    const newStatus = req.body?.status;
+
+    if (!Number.isSafeInteger(orderId) || orderId <= 0) {
+        return res.status(400).json({
+            error: "Invalid order ID."
+        });
+    }
+
+    if (!ORDER_STATUSES.includes(newStatus)) {
+        return res.status(400).json({
+            error: "Invalid order status."
+        });
+    }
+
     try {
-        const orderId = Number(req.params.id);
-        const status = req.body?.status;
+        const updateStatus = db.transaction(() => {
+            const order = db.prepare(`
+                SELECT id, status
+                FROM orders
+                WHERE id = ?
+            `).get(orderId);
 
-        if (!Number.isSafeInteger(orderId) || orderId <= 0) {
-            return res.status(400).json({
-                error: "Invalid order ID."
+            if (!order) {
+                return {
+                    statusCode: 404,
+                    error: "Order not found."
+                };
+            }
+
+            const oldStatus = order.status;
+
+            // Repeating the same status must not
+            // modify stock or order information.
+            if (oldStatus === newStatus) {
+                return {
+                    statusCode: 200,
+                    order: getOrderById(orderId)
+                };
+            }
+
+            // Cancelled orders cannot be reopened.
+            if (oldStatus === "Cancelled") {
+                return {
+                    statusCode: 409,
+                    error: "Cancelled orders cannot be reactivated."
+                };
+            }
+
+            if (newStatus === "Cancelled") {
+
+                // No cancellation after dispatch.
+                if (
+                    oldStatus !== "Pending" &&
+                    oldStatus !== "Processing"
+                ) {
+                    return {
+                        statusCode: 409,
+                        error:
+                            "Only Pending or Processing orders " +
+                            "can be cancelled."
+                    };
+                }
+
+                const items = db.prepare(`
+                    SELECT product_id, quantity
+                    FROM order_items
+                    WHERE order_id = ?
+                `).all(orderId);
+
+                // Restore each product's stock.
+                const restoreStock = db.prepare(`
+                    UPDATE products
+                    SET stock = stock + ?
+                    WHERE id = ?
+                `);
+
+                for (const item of items) {
+                    const result = restoreStock.run(
+                        item.quantity,
+                        item.product_id
+                    );
+
+                    if (result.changes !== 1) {
+                        throw new Error(
+                            "Unable to restore product stock."
+                        );
+                    }
+                }
+            }
+
+            db.prepare(`
+                UPDATE orders
+                SET status = ?
+                WHERE id = ?
+            `).run(newStatus, orderId);
+
+            return {
+                statusCode: 200,
+                order: getOrderById(orderId)
+            };
+        });
+
+        const result = updateStatus();
+
+        if (result.error) {
+            return res.status(result.statusCode).json({
+                error: result.error
             });
         }
 
-        if (!ORDER_STATUSES.includes(status)) {
-            return res.status(400).json({
-                error: "Invalid order status."
-            });
-        }
-
-        const result = db.prepare(`
-            UPDATE orders
-            SET status = ?
-            WHERE id = ?
-        `).run(status, orderId);
-
-        if (result.changes === 0) {
-            return res.status(404).json({
-                error: "Order not found."
-            });
-        }
-
-        return res.json(getOrderById(orderId));
+        return res.json(result.order);
 
     } catch (error) {
-        console.error("Update order status error:", error);
+        console.error(
+            "Order status update failed:",
+            error
+        );
 
         return res.status(500).json({
             error: "Unable to update order status."
         });
     }
 });
+
 
 // ------------------------------------------
 // START SERVER
