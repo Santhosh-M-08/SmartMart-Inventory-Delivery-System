@@ -1,0 +1,107 @@
+[
+    {
+        "id": 101,
+        "name": "Milk",
+        "category": "Dairy",
+        "price": 30.0,
+        "stock": 269
+    },
+    {
+        "id": 102,
+        "name": "Bread",
+        "category": "Bakery",
+        "price": 40.0,
+        "stock": 125
+    },
+    {
+        "id": 103,
+        "name": "Rice",
+        "category": "Grains",
+        "price": 65.0,
+        "stock": 121
+    },
+    {
+        "id": 104,
+        "name": "Eggs",
+        "category": "Dairy",
+        "price": 7.0,
+        "stock": 581
+    },
+    {
+        "id": 105,
+        "name": "Apples",
+        "category": "Fruits",
+        "price": 120.0,
+        "stock": 136
+    },
+    {
+        "id": 106,
+        "name": "Cooking Oil",
+        "category": "Grocery",
+        "price": 160.0,
+        "stock": 115
+    },
+    {
+        "id": 107,
+        "name": "Sugar",
+        "category": "Grocery",
+        "price": 45.0,
+        "stock": 163
+    },
+    {
+        "id": 108,
+        "name": "Tomatoes",
+        "category": "Vegetables",
+        "price": 35.0,
+        "stock": 202
+    },
+    {
+        "id": 109,
+        "name": "Potatoes",
+        "category": "Vegetables",
+        "price": 30.0,
+        "stock": 108
+    },
+    {
+        "id": 110,
+        "name": "Bananas",
+        "category": "Fruits",
+        "price": 50.0,
+        "stock": 190
+    },
+    {
+        "id": 111,
+        "name": "Biscuits",
+        "category": "Snacks",
+        "price": 20.0,
+        "stock": 337
+    },
+    {
+        "id": 112,
+        "name": "Curd",
+        "category": "Dairy",
+        "price": 35.0,
+        "stock": 195
+    },
+    {
+        "id": 113,
+        "name": "Tea Powder",
+        "category": "Beverages",
+        "price": 110.0,
+        "stock": 74
+    },
+    {
+        "id": 114,
+        "name": "Soft Drink",
+        "category": "Beverages",
+        "price": 40.0,
+        "stock": 149
+    },
+    {
+        "id": 115,
+        "name": "Wheat Flour",
+        "category": "Grains",
+        "price": 55.0,
+        "stock": 119
+    }
+]
