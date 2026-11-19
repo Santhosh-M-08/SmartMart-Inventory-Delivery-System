@@ -217,7 +217,7 @@
     else if (b.writtenOff) actions += '<span class="exp-muted" style="align-self:center;font-size:12px">Written off</span>';
     else if (e.qty > 0) actions += '<button type="button" class="exp-btn exp-btn--small exp-btn--danger" data-act="writeoff" data-id="' + esc(b.id) + '">Write off</button>';
     return '<tr data-batch="' + esc(b.id) + '" class="' + cls + '">' +
-      '<td><div class="exp-thumb">' + (p.image ? '<img src="' + esc(p.image) + '" alt="">' : emoji(p)) + '</div></td>' +
+      //'<td><div class="exp-thumb">' + (p.image ? '<img src="' + esc(p.image) + '" alt="">' : emoji(p)) + '</div></td>' +
       '<td><strong>' + esc(p.name) + '</strong></td>' +
       '<td>' + esc(b.batchNo) + (b.source === 'sample' ? '<span class="exp-chip">Sample</span>' : '') + '</td>' +
       '<td>' + esc(p.category) + '</td><td class="num">' + e.qty + '</td><td class="num">' + money(e.basePrice) + '</td>' +
