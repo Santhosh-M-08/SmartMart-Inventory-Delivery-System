@@ -8,8 +8,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^18.0.10",
-    "express": "^4.22.3",
-    "mongoose": "^8.24.10"
+    "express": "^4.22.3"
   }
 }

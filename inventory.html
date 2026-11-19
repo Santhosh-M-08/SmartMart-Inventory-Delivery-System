@@ -8,7 +8,6 @@
   <!-- Shared stylesheet owned by Member 3: change this path to match the repo (it is safe if missing). -->
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/inventory.css">
-  <link rel="stylesheet" href="css/expiry.css">
 </head>
 <body>
 <div class="inv-shell">
@@ -21,7 +20,6 @@
     <a href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Dashboard</a>
     <a href="inventory.html" class="is-active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M4 9h16M4 15h16"/></svg>Inventory</a>
     <a href="delivery.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>Orders &amp; Delivery</a>
-    <a href="expiry.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M12 13v3M12 18.5v.01"/></svg>Expiry Management</a>
   </nav>
   <div class="inv-sb-user"><span class="inv-sb-avatar">SM</span><span><strong>Store Manager</strong><small>SmartMart Admin</small></span></div>
 </aside>
@@ -34,10 +32,7 @@
       <h1>Inventory Management</h1>
       <p>View, search and update products and stock levels.</p>
     </div>
-    <div class="inv-head-actions">
-      <div class="exp-bell" id="expBell"></div>
-      <button type="button" class="inv-btn inv-btn--primary" id="addBtn">+ Add product</button>
-    </div>
+    <button type="button" class="inv-btn inv-btn--primary" id="addBtn">+ Add product</button>
   </header>
 
   <section class="inv-stats" aria-label="Inventory summary">
@@ -117,23 +112,6 @@
       </div>
     </div>
 
-    <!-- Expiry details: shown only when ADDING a product. Saved as a batch in Expiry Management. -->
-    <div id="expiryRow">
-      <div class="inv-row">
-        <div class="inv-field">
-          <label for="fExpiry">Expiry date</label>
-          <input id="fExpiry" type="date">
-          <small class="inv-error" id="eExpiry"></small>
-        </div>
-        <div class="inv-field">
-          <label for="fBatchNo">Batch number</label>
-          <input id="fBatchNo" maxlength="20" autocomplete="off" placeholder="Auto if empty">
-          <small class="inv-error" id="eBatchNo"></small>
-        </div>
-      </div>
-      <small style="display:block;margin:-4px 0 10px;color:var(--inv-muted,#64748B);font-size:12px">Optional. Leave empty for products that do not expire. The stock quantity above is recorded as this batch.</small>
-    </div>
-
     <div class="inv-dialog-actions">
       <button type="button" class="inv-btn" id="cancelBtn">Cancel</button>
       <button type="submit" class="inv-btn inv-btn--primary" id="saveBtn">Save product</button>
@@ -144,7 +122,5 @@
 <div class="inv-toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="js/inventory.js"></script>
-<script src="js/expiry-core.js"></script>
-<script src="js/expiry-bell.js"></script>
 </body>
 </html>

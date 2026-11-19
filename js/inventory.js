@@ -140,8 +140,8 @@
 
   /* ---------- add / edit form ---------- */
   const dialog = $('productDialog');
-  const fields = { name: $('fName'), category: $('fCategory'), price: $('fPrice'), stock: $('fStock'), expiry: $('fExpiry'), batchNo: $('fBatchNo') };
-  const errorIds = { name: 'eName', category: 'eCategory', price: 'ePrice', stock: 'eStock', expiry: 'eExpiry', batchNo: 'eBatchNo' };
+  const fields = { name: $('fName'), category: $('fCategory'), price: $('fPrice'), stock: $('fStock') };
+  const errorIds = { name: 'eName', category: 'eCategory', price: 'ePrice', stock: 'eStock' };
 
   function clearErrors() {
     Object.keys(errorIds).forEach(k => { $(errorIds[k]).textContent = ''; fields[k].closest('.inv-field').classList.remove('has-error'); });
@@ -153,7 +153,6 @@
     $('dialogTitle').textContent = product ? 'Edit product' : 'Add product';
     $('saveBtn').textContent = product ? 'Save changes' : 'Save product';
     $('fId').value = product ? product.id : '';
-    $('expiryRow').hidden = !!product;   // expiry is entered when adding; existing batches are managed in Expiry Management
     if (product) {
       fields.name.value = product.name; fields.category.value = product.category;
       fields.price.value = product.price; fields.stock.value = product.stock;
@@ -179,33 +178,6 @@
     return errors;
   }
 
-  /* Expiry date + batch number (optional). Kept OUT of the product object so the
-     product contract { id, name, category, price, stock } is unchanged. The date is
-     stored as a batch through js/expiry-core.js. */
-  function validateExpiry(extra, data) {
-    const errors = {};
-    if (!extra.expiry && !extra.batchNo) return errors;
-    if (typeof SmartMartExpiry === 'undefined') { errors.expiry = 'Expiry module is not loaded on this page.'; return errors; }
-    if (!extra.expiry) errors.expiry = 'Enter the expiry date for this batch.';
-    else if (!/^\d{4}-\d{2}-\d{2}$/.test(extra.expiry) || Number.isNaN(Date.parse(extra.expiry))) errors.expiry = 'Enter a valid date.';
-    else if (SmartMartExpiry.daysBetween(SmartMartExpiry.today(), extra.expiry) < 0) errors.expiry = 'Expiry date cannot be in the past.';
-    if (extra.batchNo && !/^[A-Za-z0-9][A-Za-z0-9-]{1,19}$/.test(extra.batchNo)) errors.batchNo = 'Use 2–20 letters, numbers or hyphens.';
-    if (extra.expiry && !errors.expiry && !(data.stock >= 1)) errors.stock = 'Enter a stock quantity of 1 or more to record an expiry date.';
-    return errors;
-  }
-
-  function saveExpiryBatch(product, extra) {
-    if (!extra.expiry || typeof SmartMartExpiry === 'undefined') return;
-    const prefix = (product.name.match(/[A-Za-z]+/) || ['BAT'])[0].toUpperCase().slice(0, 4);
-    const result = SmartMartExpiry.addBatch({
-      productId: product.id,
-      batchNo: extra.batchNo || prefix + '101',
-      qty: product.stock,
-      expiryDate: extra.expiry
-    });
-    if (!result.ok) toast('Product saved, but the expiry date could not be recorded: ' + Object.values(result.errors).join(' '), true);
-  }
-
   function onSubmit(e) {
     e.preventDefault();
     clearErrors();
@@ -221,8 +193,6 @@
     if (existing) data.category = existing.category;
 
     const errors = validate(data, editingId);
-    const extra = editingId ? {} : { expiry: fields.expiry.value.trim(), batchNo: fields.batchNo.value.trim() };
-    if (!editingId) Object.assign(errors, validateExpiry(extra, data));
     const keys = Object.keys(errors);
     if (keys.length) {
       keys.forEach(k => { $(errorIds[k]).textContent = errors[k]; fields[k].closest('.inv-field').classList.add('has-error'); });
@@ -239,7 +209,7 @@
     } else {
       const product = { id: nextId(), ...data };
       state.products.push(product);
-      if (persist(`Added “${product.name}”.`)) { saveExpiryBatch(product, extra); dialog.close(); render(); }
+      if (persist(`Added “${product.name}”.`)) { dialog.close(); render(); }
       else state.products.pop();
     }
   }

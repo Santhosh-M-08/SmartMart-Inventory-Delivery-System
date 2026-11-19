@@ -5,9 +5,6 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
-// Load environment variables from Backend/.env
-require('dotenv').config({ path: path.join(__dirname, '.env') });
-
 const app = express();
 const DATA_FILE = path.join(__dirname, 'data', 'products.json');
 const PORT = process.env.PORT || 3000;
@@ -84,10 +81,5 @@ app.delete('/api/products/:id', (req, res) => {
   writeProducts(list.filter(x => x.id !== id));
   res.sendStatus(204);
 });
-
-// ---- Expiry Management API (MongoDB) -> /api/expiry/* ----------------------------
-// Reuses readProducts/writeProducts so products are not duplicated in the database.
-// If MongoDB is not running, the product routes above keep working.
-require('./expiry').mountExpiry(app, { readProducts, writeProducts });
 
 app.listen(PORT, () => console.log(`SmartMart API running on http://localhost:${PORT}`));
