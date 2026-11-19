@@ -1,6 +1,14 @@
 
-const PRODUCT_STORAGE_KEY = "smartmart_products";
-const ORDER_STORAGE_KEY = "smartmart_orders";
+/*
+ * SmartMart — Shared Orders & Delivery Data
+ *
+ * Products: SQLite through Express API
+ * Orders: SQLite through Express API
+ *
+ * Fixed product catalog: IDs 101–115
+ */
+
+const API_BASE_URL = "http://localhost:3000/api";
 
 const ORDER_STATUSES = [
     "Pending",
@@ -10,280 +18,199 @@ const ORDER_STATUSES = [
     "Cancelled"
 ];
 
-// Fictional sample products
-const sampleProducts = [
-    {
-        id: 101,
-        name: "Milk",
-        category: "Dairy",
-        price: 30,
-        stock: 50
-    },
-    {
-        id: 102,
-        name: "Bread",
-        category: "Bakery",
-        price: 40,
-        stock: 35
-    },
-    {
-        id: 103,
-        name: "Rice",
-        category: "Grains",
-        price: 60,
-        stock: 80
-    },
-    {
-        id: 104,
-        name: "Eggs",
-        category: "Dairy",
-        price: 7,
-        stock: 100
-    },
-    {
-        id: 105,
-        name: "Apples",
-        category: "Fruits",
-        price: 120,
-        stock: 25
-    },
-    {
-        id: 106,
-        name: "Cooking Oil",
-        category: "Groceries",
-        price: 150,
-        stock: 40
-    }
-];
+// Cached data for the existing Delivery UI.
+// The database remains the source of truth.
+let cachedProducts = [];
+let cachedOrders = [];
 
-// Fictional sample orders
-// Item price represents the unit price at order time.
-const sampleOrders = [
-    {
-        id: 1001,
-        customerName: "Rahul Sharma",
-        items: [
-            { productId: 101, quantity: 2, price: 30 },
-            { productId: 102, quantity: 1, price: 40 }
-        ],
-        total: 100,
-        status: "Pending",
-        orderDate: "2026-10-10"
-    },
-    {
-        id: 1002,
-        customerName: "Priya Rao",
-        items: [
-            { productId: 103, quantity: 2, price: 60 },
-            { productId: 104, quantity: 6, price: 7 }
-        ],
-        total: 162,
-        status: "Processing",
-        orderDate: "2026-10-09"
-    },
-    {
-        id: 1003,
-        customerName: "Arjun Kumar",
-        items: [
-            { productId: 105, quantity: 1, price: 120 },
-            { productId: 101, quantity: 1, price: 30 }
-        ],
-        total: 150,
-        status: "Dispatched",
-        orderDate: "2026-10-09"
-    },
-    {
-        id: 1004,
-        customerName: "Sneha Patel",
-        items: [
-            { productId: 106, quantity: 1, price: 150 },
-            { productId: 102, quantity: 2, price: 40 }
-        ],
-        total: 230,
-        status: "Delivered",
-        orderDate: "2026-10-08"
-    },
-    {
-        id: 1005,
-        customerName: "Vikram Singh",
-        items: [
-            { productId: 103, quantity: 1, price: 60 }
-        ],
-        total: 60,
-        status: "Cancelled",
-        orderDate: "2026-10-08"
-    },
-    {
-        id: 1006,
-        customerName: "Ananya Reddy",
-        items: [
-            { productId: 105, quantity: 2, price: 120 },
-            { productId: 104, quantity: 12, price: 7 }
-        ],
-        total: 324,
-        status: "Pending",
-        orderDate: "2026-10-10"
-    }
-];
+// ------------------------------------------
+// API HELPER
+// ------------------------------------------
 
-// Initialize sample data without overwriting saved data.
-function initializeSampleData() {
-    if (localStorage.getItem(PRODUCT_STORAGE_KEY) === null) {
-        localStorage.setItem(
-            PRODUCT_STORAGE_KEY,
-            JSON.stringify(sampleProducts)
+async function apiRequest(endpoint, options = {}) {
+    let response;
+
+    try {
+        response = await fetch(
+            `${API_BASE_URL}${endpoint}`,
+            {
+                cache: "no-store",
+                ...options
+            }
+        );
+    } catch (error) {
+        throw new Error(
+            "Cannot connect to SmartMart backend. " +
+            "Make sure the server is running on port 3000."
         );
     }
 
-    if (localStorage.getItem(ORDER_STORAGE_KEY) === null) {
-        localStorage.setItem(
-            ORDER_STORAGE_KEY,
-            JSON.stringify(sampleOrders)
-        );
+    if (!response.ok) {
+        let message = `Request failed (${response.status}).`;
+
+        try {
+            const result = await response.json();
+
+            if (result.error) {
+                message = result.error;
+            } else if (result.errors) {
+                message = Object.values(
+                    result.errors
+                ).join(" ");
+            }
+        } catch (error) {
+            // Keep the default message.
+        }
+
+        throw new Error(message);
     }
+
+    if (response.status === 204) {
+        return null;
+    }
+
+    return response.json();
 }
 
-// Return the shared product list.
+// ------------------------------------------
+// LOAD PRODUCTS AND ORDERS
+// ------------------------------------------
+
+async function refreshData() {
+    const [products, orders] = await Promise.all([
+        apiRequest("/products"),
+        apiRequest("/orders")
+    ]);
+
+    if (!Array.isArray(products)) {
+        throw new Error("Invalid products response.");
+    }
+
+    if (!Array.isArray(orders)) {
+        throw new Error("Invalid orders response.");
+    }
+
+    cachedProducts = products;
+    cachedOrders = orders;
+
+    return {
+        products: cachedProducts,
+        orders: cachedOrders
+    };
+}
+
+// ------------------------------------------
+// SHARED DATA ACCESS
+// ------------------------------------------
+
+// These functions remain synchronous so the
+// existing Delivery rendering code can use them.
 function getProducts() {
-    const products = localStorage.getItem(PRODUCT_STORAGE_KEY);
-    return products === null ? [] : JSON.parse(products);
+    return cachedProducts;
 }
 
-// Return the shared order list.
 function getOrders() {
-    const orders = localStorage.getItem(ORDER_STORAGE_KEY);
-    return orders === null ? [] : JSON.parse(orders);
+    return cachedOrders;
 }
 
-// Update one order and persist its new status.
-function updateOrderStatus(orderId, status) {
+// ------------------------------------------
+// UPDATE ORDER STATUS
+// ------------------------------------------
+
+async function updateOrderStatus(orderId, status) {
     if (!ORDER_STATUSES.includes(status)) {
         throw new Error("Invalid order status.");
     }
 
-    const orders = getOrders();
-    const order = orders.find(item => item.id === orderId);
-
-    if (!order) {
-        throw new Error("Order not found.");
-    }
-
-    order.status = status;
-
-    localStorage.setItem(
-        ORDER_STORAGE_KEY,
-        JSON.stringify(orders)
+    const updatedOrder = await apiRequest(
+        `/orders/${orderId}/status`,
+        {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status })
+        }
     );
 
-    return order;
+    // Reload database records after successful save.
+    await refreshData();
+
+    return updatedOrder;
 }
 
-// Create an order and deduct the ordered quantities from inventory.
-function createOrder(customerName, items) {
-    if (!customerName || !customerName.trim()) {
+// ------------------------------------------
+// CREATE ORDER
+// ------------------------------------------
+
+async function createOrder(customerName, items) {
+    if (
+        typeof customerName !== "string" ||
+        !customerName.trim()
+    ) {
         throw new Error("Customer name is required.");
     }
 
     if (!Array.isArray(items) || items.length === 0) {
-        throw new Error("Please add at least one product.");
+        throw new Error(
+            "Please add at least one product."
+        );
     }
 
-    const products = getProducts();
-    const orders = getOrders();
-
-    // Combine quantities if the same product appears more than once.
-    const quantitiesByProduct = new Map();
+    // Validate item structure before sending.
+    const quantities = new Map();
 
     for (const item of items) {
         if (
-            !Number.isInteger(item.productId) ||
-            !Number.isInteger(item.quantity) ||
+            !Number.isSafeInteger(item.productId) ||
+            !Number.isSafeInteger(item.quantity) ||
+            item.productId <= 0 ||
             item.quantity <= 0
         ) {
-            throw new Error("Invalid product or quantity.");
-        }
-
-        quantitiesByProduct.set(
-            item.productId,
-            (quantitiesByProduct.get(item.productId) || 0) +
-                item.quantity
-        );
-    }
-
-    // Validate every product before changing any stock.
-    const orderItems = [];
-    let total = 0;
-
-    for (const [productId, quantity] of quantitiesByProduct) {
-        const product = products.find(function (item) {
-            return item.id === productId;
-        });
-
-        if (!product) {
-            throw new Error("A selected product was not found.");
-        }
-
-        if (quantity > product.stock) {
             throw new Error(
-                "Insufficient stock for " + product.name +
-                ". Available stock: " + product.stock
+                "Invalid product or quantity."
             );
         }
 
-        orderItems.push({
-            productId: product.id,
-            quantity: quantity,
-            price: product.price
-        });
+        const combined =
+            (quantities.get(item.productId) || 0) +
+            item.quantity;
 
-        total += product.price * quantity;
+        if (!Number.isSafeInteger(combined)) {
+            throw new Error(
+                "Order quantity is too large."
+            );
+        }
+
+        quantities.set(item.productId, combined);
     }
 
-    // Generate a unique order ID.
-    const nextId = orders.length === 0
-        ? 1001
-        : Math.max(...orders.map(order => order.id)) + 1;
-
-    // Get today's date in YYYY-MM-DD format.
-    const today = new Date();
-    const orderDate =
-        today.getFullYear() + "-" +
-        String(today.getMonth() + 1).padStart(2, "0") + "-" +
-        String(today.getDate()).padStart(2, "0");
-
-    const newOrder = {
-        id: nextId,
-        customerName: customerName.trim(),
-        items: orderItems,
-        total: total,
-        status: "Pending",
-        orderDate: orderDate
-    };
-
-    // Deduct stock only after all products have passed validation.
-    for (const [productId, quantity] of quantitiesByProduct) {
-        const product = products.find(
-            item => item.id === productId
-        );
-
-        product.stock -= quantity;
-    }
-
-    // Save the updated inventory and the new order.
-    localStorage.setItem(
-        PRODUCT_STORAGE_KEY,
-        JSON.stringify(products)
+    const normalizedItems = Array.from(
+        quantities,
+        ([productId, quantity]) => ({
+            productId,
+            quantity
+        })
     );
 
-    orders.push(newOrder);
-
-    localStorage.setItem(
-        ORDER_STORAGE_KEY,
-        JSON.stringify(orders)
+    // The backend validates live stock, calculates
+    // prices and performs stock deduction atomically.
+    const newOrder = await apiRequest(
+        "/orders",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                customerName: customerName.trim(),
+                items: normalizedItems
+            })
+        }
     );
+
+    // Refresh products and orders from SQLite.
+    await refreshData();
 
     return newOrder;
 }
-
-// Make sure sample data is available when this file loads.
-initializeSampleData();

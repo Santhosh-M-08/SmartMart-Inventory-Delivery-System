@@ -317,6 +317,270 @@ app.delete("/api/products/:id", (req, res) => {
     }
 });
 
+
+
+ // ------------------------------------------
+ // ORDERS API - SQLITE
+ // ------------------------------------------
+
+function getOrderById(id) {
+    const order = db.prepare(`
+        SELECT
+            id,
+            customer_name AS customerName,
+            order_date AS orderDate,
+            status,
+            total
+        FROM orders
+        WHERE id = ?
+    `).get(id);
+
+    if (!order) {
+        return null;
+    }
+
+    order.items = db.prepare(`
+        SELECT
+            product_id AS productId,
+            quantity,
+            price
+        FROM order_items
+        WHERE order_id = ?
+        ORDER BY id
+    `).all(id);
+
+    return order;
+}
+
+// GET all orders
+app.get("/api/orders", (req, res) => {
+    try {
+        const orders = db.prepare(`
+            SELECT id
+            FROM orders
+            ORDER BY id DESC
+        `).all();
+
+        return res.json(
+            orders.map(order => getOrderById(order.id))
+        );
+    } catch (error) {
+        console.error("Get orders error:", error);
+        return res.status(500).json({
+            error: "Unable to retrieve orders."
+        });
+    }
+});
+
+// POST - Create an order and update stock atomically
+app.post("/api/orders", (req, res) => {
+    const customerName =
+        typeof req.body?.customerName === "string"
+            ? req.body.customerName.trim()
+            : "";
+
+    const items = req.body?.items;
+
+    if (customerName.length < 2 || customerName.length > 100) {
+        return res.status(400).json({
+            error: "Customer name must contain 2–100 characters."
+        });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({
+            error: "Order must contain at least one product."
+        });
+    }
+
+    // Combine repeated product IDs.
+    const quantities = new Map();
+
+    for (const item of items) {
+        const productId = item?.productId;
+        const quantity = item?.quantity;
+
+        if (
+            !Number.isSafeInteger(productId) ||
+            productId <= 0 ||
+            !Number.isSafeInteger(quantity) ||
+            quantity <= 0
+        ) {
+            return res.status(400).json({
+                error: "Invalid product ID or quantity."
+            });
+        }
+
+        const combined =
+            (quantities.get(productId) || 0) + quantity;
+
+        if (!Number.isSafeInteger(combined)) {
+            return res.status(400).json({
+                error: "Order quantity is too large."
+            });
+        }
+
+        quantities.set(productId, combined);
+    }
+
+    const createOrder = db.transaction(() => {
+        const orderItems = [];
+        let total = 0;
+
+        // Validate products and available stock.
+        for (const [productId, quantity] of quantities) {
+            const product = db.prepare(`
+                SELECT id, name, price, stock
+                FROM products
+                WHERE id = ?
+            `).get(productId);
+
+            if (!product) {
+                throw new Error(
+                    `Product #${productId} was not found.`
+                );
+            }
+
+            if (quantity > product.stock) {
+                throw new Error(
+                    `Insufficient stock for ${product.name}. ` +
+                    `Available: ${product.stock}`
+                );
+            }
+
+            orderItems.push({
+                productId,
+                quantity,
+                price: product.price
+            });
+
+            total += product.price * quantity;
+        }
+
+        // Create the next order ID.
+        const nextId = db.prepare(`
+            SELECT MAX(
+                COALESCE((SELECT MAX(id) FROM orders), 0),
+                1000
+            ) + 1 AS id
+        `).get().id;
+
+        const now = new Date();
+        const orderDate = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0")
+        ].join("-");
+
+        db.prepare(`
+            INSERT INTO orders (
+                id, customer_name, order_date, status, total
+            )
+            VALUES (?, ?, ?, 'Pending', ?)
+        `).run(nextId, customerName, orderDate, total);
+
+        const insertItem = db.prepare(`
+            INSERT INTO order_items (
+                order_id, product_id, quantity, price
+            )
+            VALUES (?, ?, ?, ?)
+        `);
+
+        const deductStock = db.prepare(`
+            UPDATE products
+            SET stock = stock - ?
+            WHERE id = ? AND stock >= ?
+        `);
+
+        for (const item of orderItems) {
+            const result = deductStock.run(
+                item.quantity,
+                item.productId,
+                item.quantity
+            );
+
+            if (result.changes !== 1) {
+                throw new Error(
+                    `Unable to reserve stock for product #${item.productId}.`
+                );
+            }
+
+            insertItem.run(
+                nextId,
+                item.productId,
+                item.quantity,
+                item.price
+            );
+        }
+
+        return getOrderById(nextId);
+    });
+
+    try {
+        const order = createOrder();
+        return res.status(201).json(order);
+
+    } catch (error) {
+        console.error("Create order error:", error);
+
+        return res.status(400).json({
+            error: error.message
+        });
+    }
+});
+
+// ------------------------------------------
+// UPDATE ORDER STATUS
+// ------------------------------------------
+
+const ORDER_STATUSES = [
+    "Pending",
+    "Processing",
+    "Dispatched",
+    "Delivered",
+    "Cancelled"
+];
+
+app.put("/api/orders/:id/status", (req, res) => {
+    try {
+        const orderId = Number(req.params.id);
+        const status = req.body?.status;
+
+        if (!Number.isSafeInteger(orderId) || orderId <= 0) {
+            return res.status(400).json({
+                error: "Invalid order ID."
+            });
+        }
+
+        if (!ORDER_STATUSES.includes(status)) {
+            return res.status(400).json({
+                error: "Invalid order status."
+            });
+        }
+
+        const result = db.prepare(`
+            UPDATE orders
+            SET status = ?
+            WHERE id = ?
+        `).run(status, orderId);
+
+        if (result.changes === 0) {
+            return res.status(404).json({
+                error: "Order not found."
+            });
+        }
+
+        return res.json(getOrderById(orderId));
+
+    } catch (error) {
+        console.error("Update order status error:", error);
+
+        return res.status(500).json({
+            error: "Unable to update order status."
+        });
+    }
+});
+
 // ------------------------------------------
 // START SERVER
 // ------------------------------------------
