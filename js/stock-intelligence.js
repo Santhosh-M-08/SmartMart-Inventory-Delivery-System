@@ -9,7 +9,7 @@
  */
 
 const API_URL = "http://localhost:3000/api/products";
-const FORECAST_URL = "ml/data/forecasts.json";
+const FORECAST_URL = "http://localhost:3000/api/predictions";
 
 // Inventory planning assumptions
 const LEAD_TIME = 2;
