@@ -1,85 +1,327 @@
-/* SmartMart — OPTIONAL inventory REST API (not needed for the first review).
-   Same product contract as the frontend: { id, name, category, price, stock }.
-   Run:  cd backend && npm install && npm start   ->  http://localhost:3000/api/products */
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
+
+/*
+ * SmartMart Inventory REST API
+ * Database: SQLite
+ *
+ * Start from Backend:
+ * npm.cmd start
+ */
+
+const express = require("express");
+const { initializeDatabase } = require("./database/db");
 
 const app = express();
-const DATA_FILE = path.join(__dirname, 'data', 'products.json');
 const PORT = process.env.PORT || 3000;
 
+// Open and initialize SQLite once at startup
+const db = initializeDatabase();
+
 app.use(express.json());
-app.use((req, res, next) => {            // allow the static frontend to call the API during development
-  res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS' });
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
+
+// CORS for development
+app.use((req, res, next) => {
+    res.set({
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+    });
+
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(204);
+    }
+
+    next();
 });
 
-const SAMPLE = [
-  { id: 1, name: 'Sona Masoori Rice 5kg', category: 'Grains', price: 320, stock: 40 },
-  { id: 2, name: 'Fresh Toned Milk 500ml', category: 'Dairy', price: 28, stock: 8 },
-  { id: 3, name: 'Sunflower Oil 1L', category: 'Oils', price: 135, stock: 6 }
-];
+// Sanitize incoming product data
+function clean(body = {}) {
+    return {
+        name: String(body.name ?? "")
+            .trim()
+            .replace(/\s+/g, " "),
 
-function readProducts() {
-  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
-  catch (err) { writeProducts(SAMPLE); return SAMPLE.slice(); }
+        category: String(body.category ?? "")
+            .trim()
+            .replace(/\s+/g, " "),
+
+        price: Number(body.price),
+        stock: Number(body.stock)
+    };
 }
-function writeProducts(list) {
-  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-  fs.writeFileSync(DATA_FILE, JSON.stringify(list, null, 2));
+
+// Validate product fields
+function validate(product) {
+    const errors = {};
+
+    if (
+        product.name.length < 2 ||
+        product.name.length > 60
+    ) {
+        errors.name = "Name must be 2–60 characters.";
+    }
+
+    if (!product.category) {
+        errors.category = "Category is required.";
+    }
+
+    if (
+        !Number.isFinite(product.price) ||
+        product.price <= 0
+    ) {
+        errors.price = "Price must be greater than 0.";
+    }
+
+    if (
+        !Number.isInteger(product.stock) ||
+        product.stock < 0
+    ) {
+        errors.stock =
+            "Stock must be a whole number, 0 or more.";
+    }
+
+    return errors;
 }
 
-function clean(body) {
-  return {
-    name: String(body.name ?? '').trim().replace(/\s+/g, ' '),
-    category: String(body.category ?? '').trim().replace(/\s+/g, ' '),
-    price: Number(body.price),
-    stock: Number(body.stock)
-  };
+// Check if name/category combination already exists
+function isDuplicate(product, ignoreId = null) {
+    const existing = db.prepare(`
+        SELECT id
+        FROM products
+        WHERE LOWER(name) = LOWER(?)
+          AND LOWER(category) = LOWER(?)
+          AND (? IS NULL OR id != ?)
+        LIMIT 1
+    `).get(
+        product.name,
+        product.category,
+        ignoreId,
+        ignoreId
+    );
+
+    return Boolean(existing);
 }
-function validate(d) {
-  const e = {};
-  if (d.name.length < 2 || d.name.length > 60) e.name = 'Name must be 2–60 characters.';
-  if (!d.category) e.category = 'Category is required.';
-  if (!Number.isFinite(d.price) || d.price <= 0) e.price = 'Price must be greater than 0.';
-  if (!Number.isInteger(d.stock) || d.stock < 0) e.stock = 'Stock must be a whole number, 0 or more.';
-  return e;
+
+// Centralized API error handling
+function handleError(res, error) {
+    console.error("Database error:", error);
+
+    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+        return res.status(409).json({
+            errors: {
+                name: "Product already exists in that category."
+            }
+        });
+    }
+
+    if (error.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+        return res.status(409).json({
+            error: "This product is referenced by other records."
+        });
+    }
+
+    return res.status(500).json({
+        error: "Internal database error."
+    });
 }
-const isDup = (list, d, ignoreId) => list.some(p => p.id !== ignoreId &&
-  p.name.toLowerCase() === d.name.toLowerCase() && p.category.toLowerCase() === d.category.toLowerCase());
 
-app.get('/api/products', (req, res) => {
-  const q = String(req.query.q || '').toLowerCase();
-  const category = String(req.query.category || '');
-  res.json(readProducts().filter(p => (!q || p.name.toLowerCase().includes(q)) && (!category || p.category === category)));
+// ------------------------------------------
+// GET PRODUCTS
+// ------------------------------------------
+app.get("/api/products", (req, res) => {
+    try {
+        const q = String(req.query.q || "").toLowerCase();
+        const category = String(req.query.category || "");
+
+        const products = db.prepare(`
+            SELECT id, name, category, price, stock
+            FROM products
+            ORDER BY id
+        `).all();
+
+        const filtered = products.filter(product =>
+            (!q || product.name.toLowerCase().includes(q)) &&
+            (!category || product.category === category)
+        );
+
+        return res.json(filtered);
+
+    } catch (error) {
+        return handleError(res, error);
+    }
 });
 
-app.post('/api/products', (req, res) => {
-  const list = readProducts(), d = clean(req.body), errors = validate(d);
-  if (Object.keys(errors).length) return res.status(400).json({ errors });
-  if (isDup(list, d)) return res.status(409).json({ errors: { name: 'Product already exists in that category.' } });
-  const product = { id: list.reduce((m, p) => Math.max(m, p.id), 0) + 1, ...d };
-  list.push(product); writeProducts(list);
-  res.status(201).json(product);
+// ------------------------------------------
+// GET PRODUCTS - SQLITE TEST ENDPOINT
+// ------------------------------------------
+app.get("/api/sqlite/products", (req, res) => {
+    try {
+        const products = db.prepare(`
+            SELECT id, name, category, price, stock
+            FROM products
+            ORDER BY id
+        `).all();
+
+        return res.json(products);
+
+    } catch (error) {
+        return handleError(res, error);
+    }
 });
 
-app.put('/api/products/:id', (req, res) => {
-  const list = readProducts(), id = Number(req.params.id), p = list.find(x => x.id === id);
-  if (!p) return res.status(404).json({ error: 'Product not found.' });
-  const d = clean(req.body), errors = validate(d);
-  if (Object.keys(errors).length) return res.status(400).json({ errors });
-  if (isDup(list, d, id)) return res.status(409).json({ errors: { name: 'Product already exists in that category.' } });
-  Object.assign(p, d); writeProducts(list);
-  res.json(p);
+// ------------------------------------------
+// ADD PRODUCT
+// ------------------------------------------
+app.post("/api/products", (req, res) => {
+    try {
+        const product = clean(req.body);
+        const errors = validate(product);
+
+        if (Object.keys(errors).length) {
+            return res.status(400).json({ errors });
+        }
+
+        if (isDuplicate(product)) {
+            return res.status(409).json({
+                errors: {
+                    name: "Product already exists in that category."
+                }
+            });
+        }
+
+        const createProduct = db.transaction(() => {
+            // Keep IDs compatible with current
+            // catalog IDs 101–115.
+            const next = db.prepare(`
+                SELECT COALESCE(MAX(id), 0) + 1 AS id
+                FROM products
+            `).get();
+
+            db.prepare(`
+                INSERT INTO products
+                    (id, name, category, price, stock)
+                VALUES (?, ?, ?, ?, ?)
+            `).run(
+                next.id,
+                product.name,
+                product.category,
+                product.price,
+                product.stock
+            );
+
+            return {
+                id: next.id,
+                ...product
+            };
+        });
+
+        const created = createProduct();
+
+        return res.status(201).json(created);
+
+    } catch (error) {
+        return handleError(res, error);
+    }
 });
 
-app.delete('/api/products/:id', (req, res) => {
-  const list = readProducts(), id = Number(req.params.id);
-  if (!list.some(x => x.id === id)) return res.status(404).json({ error: 'Product not found.' });
-  writeProducts(list.filter(x => x.id !== id));
-  res.sendStatus(204);
+// ------------------------------------------
+// UPDATE PRODUCT
+// ------------------------------------------
+app.put("/api/products/:id", (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        if (!Number.isSafeInteger(id) || id <= 0) {
+            return res.status(400).json({
+                error: "Invalid product ID."
+            });
+        }
+
+        const existing = db.prepare(`
+            SELECT id FROM products WHERE id = ?
+        `).get(id);
+
+        if (!existing) {
+            return res.status(404).json({
+                error: "Product not found."
+            });
+        }
+
+        const product = clean(req.body);
+        const errors = validate(product);
+
+        if (Object.keys(errors).length) {
+            return res.status(400).json({ errors });
+        }
+
+        if (isDuplicate(product, id)) {
+            return res.status(409).json({
+                errors: {
+                    name: "Product already exists in that category."
+                }
+            });
+        }
+
+        db.prepare(`
+            UPDATE products
+            SET name = ?,
+                category = ?,
+                price = ?,
+                stock = ?
+            WHERE id = ?
+        `).run(
+            product.name,
+            product.category,
+            product.price,
+            product.stock,
+            id
+        );
+
+        return res.json({
+            id,
+            ...product
+        });
+
+    } catch (error) {
+        return handleError(res, error);
+    }
 });
 
-app.listen(PORT, () => console.log(`SmartMart API running on http://localhost:${PORT}`));
+// ------------------------------------------
+// DELETE PRODUCT
+// ------------------------------------------
+app.delete("/api/products/:id", (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        if (!Number.isSafeInteger(id) || id <= 0) {
+            return res.status(400).json({
+                error: "Invalid product ID."
+            });
+        }
+
+        const result = db.prepare(`
+            DELETE FROM products
+            WHERE id = ?
+        `).run(id);
+
+        if (result.changes === 0) {
+            return res.status(404).json({
+                error: "Product not found."
+            });
+        }
+
+        return res.sendStatus(204);
+
+    } catch (error) {
+        return handleError(res, error);
+    }
+});
+
+// ------------------------------------------
+// START SERVER
+// ------------------------------------------
+app.listen(PORT, () => {
+    console.log(
+        `SmartMart API running on http://localhost:${PORT}`
+    );
+});
