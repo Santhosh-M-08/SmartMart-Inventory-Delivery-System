@@ -1,0 +1,245 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Stock Intelligence | SmartMart</title>
+
+    <link rel="stylesheet"
+          href="css/stock-intelligence.css">
+    <link rel="stylesheet" href="css/smartmart-ui.css">
+    <script src="js/smartmart-ui.js" defer></script>
+</head>
+
+<body>
+
+    <div class="app-layout">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="sidebar-brand">
+                <span class="brand-logo">S</span>
+                <span>SmartMart</span>
+            </div>
+
+            <p class="sidebar-label">MAIN MENU</p>
+
+            <nav class="sidebar-nav">
+
+                <a href="index.html">
+                    Dashboard
+                </a>
+
+                <a href="inventory.html">
+                    Inventory
+                </a>
+
+                <a href="delivery.html">
+                    Orders &amp; Delivery
+                </a>
+
+                <a href="stock-intelligence.html"
+                   class="active"
+                   aria-current="page">
+                    AI Stock Intelligence
+                </a>
+
+            </nav>
+
+            <div class="sidebar-user">
+                <strong>Store Manager</strong>
+                <small>SmartMart Admin</small>
+            </div>
+
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+
+            <!-- HEADER -->
+            <header>
+                <h1>SmartMart AI Stock Intelligence</h1>
+
+                <p>
+                    Machine Learning Demand Forecasting
+                    &amp; Inventory Recommendations
+                </p>
+            </header>
+
+            <main>
+
+                <!-- TOOLBAR -->
+                <div class="toolbar">
+
+                    <a href="inventory.html"
+                       class="back-link">
+                        Back to Inventory
+                    </a>
+
+                    <button id="refreshBtn" type="button">
+                        Refresh Stock
+                    </button>
+
+                </div>
+
+                <p id="forecastDate"></p>
+
+                <p id="message" role="alert"
+                   aria-live="polite"></p>
+
+                <!-- SUMMARY CARDS -->
+                <section class="stats"
+                         aria-label="Inventory summary">
+
+                    <div class="card">
+                        <span>Inventory Products</span>
+                        <strong id="total">0</strong>
+                    </div>
+
+                    <div class="card">
+                        <span>Critical</span>
+                        <strong id="critical">0</strong>
+                    </div>
+
+                    <div class="card">
+                        <span>Warning</span>
+                        <strong id="warning">0</strong>
+                    </div>
+
+                    <div class="card">
+                        <span>Healthy</span>
+                        <strong id="healthy">0</strong>
+                    </div>
+
+                </section>
+
+                <!-- INVENTORY ANALYSIS -->
+                <section class="table-card">
+
+                    <h2>AI Inventory Analysis</h2>
+
+                    <!-- SEARCH, FILTER AND SORT -->
+                    <div class="filter-bar">
+
+                        <input
+                            type="search"
+                            id="productSearch"
+                            placeholder="Search products..."
+                            aria-label="Search products"
+                        >
+
+                        <select id="riskFilter"
+                                aria-label="Filter by risk">
+
+                            <option value="all">
+                                All Risk Levels
+                            </option>
+
+                            <option value="Critical">
+                                Critical
+                            </option>
+
+                            <option value="Warning">
+                                Warning
+                            </option>
+
+                            <option value="Healthy">
+                                Healthy
+                            </option>
+
+                            <option value="Forecast Unavailable">
+                                Forecast Unavailable
+                            </option>
+
+                        </select>
+
+                        <!-- SORTING DROPDOWN -->
+                        <select id="sortFilter"
+                                aria-label="Sort inventory">
+
+                            <option value="risk">
+                                Highest Risk First
+                            </option>
+
+                            <option value="days">
+                                Fewest Days Left
+                            </option>
+
+                            <option value="name">
+                                Product Name (A–Z)
+                            </option>
+
+                            <option value="demand">
+                                Highest Demand First
+                            </option>
+
+                        </select>
+
+                        <button id="clearFiltersBtn"
+                                type="button">
+                            Clear Filters
+                        </button>
+
+                    </div>
+
+                    <!-- FILTERED PRODUCT COUNT -->
+                    <p id="filterCount" class="notice"
+                       aria-live="polite"></p>
+
+                    <!-- INVENTORY TABLE -->
+                    <div class="table-responsive">
+
+                        <table>
+
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Current Stock</th>
+                                    <th>Predicted Demand</th>
+                                    <th>Days Left</th>
+                                    <th>Risk</th>
+                                    <th>Reorder Units</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="stockTable">
+                                <!-- Generated by JavaScript -->
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    <!-- EMPTY FILTER RESULT -->
+                    <p id="emptyFilterMessage"
+                       class="notice"
+                       hidden>
+                        No products match the selected filters.
+                    </p>
+
+                </section>
+
+                <!-- FORECAST DISCLAIMER -->
+                <p class="notice">
+                    Stock coverage assumes constant daily demand
+                    and no incoming replenishment.
+                    Forecasts are estimates, not guaranteed sales.
+                </p>
+
+            </main>
+
+        </div>
+        <!-- END MAIN CONTENT -->
+
+    </div>
+    <!-- END APP LAYOUT -->
+
+    <script src="js/stock-intelligence.js"></script>
+
+</body>
+</html>

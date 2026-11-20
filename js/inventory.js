@@ -1,298 +1,697 @@
-/* SmartMart — Inventory Management module (Member 1)
-   Product contract (PROJECT_RULES.md): { id:number, name:string, category:string, price:number, stock:number }
 
-   STORAGE ADAPTER
-   The rules do not define shared storage functions yet, so this file talks to localStorage
-   ONLY through the two methods in `ProductStore` below. If the team has a shared
-   getProducts()/saveProducts(), replace the bodies of these two methods and nothing else changes.
-   Agree the key name with the team: PRODUCTS_KEY must be the same in every module. */
+/*
+ * SmartMart — Inventory Management
+ *
+ * Storage: SQLite through Express REST API
+ * Fixed catalog: 15 products (IDs 101–115)
+ *
+ * Features:
+ * - View inventory
+ * - Search and category filtering
+ * - Low-stock alerts
+ * - Edit product price and stock
+ * - Inventory summary statistics
+ */
+
 (() => {
-  'use strict';
+    "use strict";
 
-  const PRODUCTS_KEY = 'smartmart_products';
-  const THRESHOLD_KEY = 'smartmart_low_stock_threshold';
-  const DEFAULT_THRESHOLD = 10;
+    const API_URL = "http://localhost:3000/api/products";
 
-  // Fictional sample data, only used the first time if nobody has created the dataset yet.
-  const SAMPLE_PRODUCTS = [
-    { id: 1, name: 'Sona Masoori Rice 5kg', category: 'Grains', price: 320, stock: 40 },
-    { id: 2, name: 'Fresh Toned Milk 500ml', category: 'Dairy', price: 28, stock: 8 },
-    { id: 3, name: 'Wheat Flour 5kg', category: 'Grains', price: 245, stock: 22 },
-    { id: 4, name: 'Cream Biscuits Pack', category: 'Snacks', price: 20, stock: 0 },
-    { id: 5, name: 'Sunflower Oil 1L', category: 'Oils', price: 135, stock: 6 },
-    { id: 6, name: 'Tea Powder 250g', category: 'Beverages', price: 110, stock: 35 },
-    { id: 7, name: 'Salted Butter 100g', category: 'Dairy', price: 56, stock: 14 },
-    { id: 8, name: 'Instant Noodles', category: 'Snacks', price: 14, stock: 90 },
-    { id: 9, name: 'Bath Soap', category: 'Personal Care', price: 38, stock: 4 },
-    { id: 10, name: 'Mineral Water 1L', category: 'Beverages', price: 20, stock: 60 }
-  ];
+    const THRESHOLD_KEY = "smartmart_low_stock_threshold";
+    const DEFAULT_THRESHOLD = 10;
 
-  const ProductStore = {
-    getProducts() {
-      try {
-        const raw = localStorage.getItem(PRODUCTS_KEY);
-        if (raw === null) { this.saveProducts(SAMPLE_PRODUCTS); return SAMPLE_PRODUCTS.map(p => ({ ...p })); }
-        const data = JSON.parse(raw);
-        return Array.isArray(data) ? data : [];
-      } catch (err) { return []; }
-    },
-    saveProducts(list) {
-      try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list)); return true; }
-      catch (err) { return false; }
-    }
-  };
-
-  /* ---------- state & helpers ---------- */
-  const $ = id => document.getElementById(id);
-  const state = { products: [], query: '', category: 'all', lowOnly: false, threshold: DEFAULT_THRESHOLD };
-  let toastTimer;
-
-  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const money = n => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 });
-  const stockLevel = p => (p.stock <= 0 ? 'out' : p.stock <= state.threshold ? 'low' : 'ok');
-  const nextId = () => state.products.reduce((m, p) => Math.max(m, p.id), 0) + 1;
-
-  function toast(message, isError) {
-    const t = $('toast');
-    t.textContent = message;
-    t.classList.toggle('is-error', !!isError);
-    t.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
-  }
-
-  function persist(successMsg) {
-    if (ProductStore.saveProducts(state.products)) { toast(successMsg); return true; }
-    toast('Could not save. Browser storage is unavailable.', true);
-    return false;
-  }
-
-  /* ---------- rendering ---------- */
-  function render() {
-    renderCategories();
-    renderStats();
-    renderTable();
-  }
-
-  function renderCategories() {
-    const cats = [...new Set(state.products.map(p => p.category))].sort((a, b) => a.localeCompare(b));
-    if (state.category !== 'all' && !cats.includes(state.category)) state.category = 'all';
-    $('categoryFilter').innerHTML = '<option value="all">All categories</option>' +
-      cats.map(c => `<option value="${esc(c)}"${c === state.category ? ' selected' : ''}>${esc(c)}</option>`).join('');
-    $('categoryList').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
-  }
-
-  function renderStats() {
-    const low = state.products.filter(p => stockLevel(p) !== 'ok');
-    $('statProducts').textContent = state.products.length;
-    $('statUnits').textContent = state.products.reduce((a, p) => a + p.stock, 0).toLocaleString('en-IN');
-    $('statLow').textContent = low.length;
-    $('statValue').textContent = money(state.products.reduce((a, p) => a + p.stock * p.price, 0));
-
-    const banner = $('lowBanner');
-    banner.hidden = low.length === 0;
-    if (low.length) {
-      const out = low.filter(p => p.stock <= 0).length;
-      $('lowBannerText').textContent = `⚠ ${low.length} product${low.length > 1 ? 's' : ''} need restocking` + (out ? ` (${out} out of stock).` : '.');
-      $('lowToggle').textContent = state.lowOnly ? 'Show all products' : 'Show only low stock';
-    } else { state.lowOnly = false; }
-  }
-
-  function filtered() {
-    const q = state.query.trim().toLowerCase();
-    return state.products.filter(p =>
-      (!q || p.name.toLowerCase().includes(q)) &&
-      (state.category === 'all' || p.category === state.category) &&
-      (!state.lowOnly || stockLevel(p) !== 'ok'));
-  }
-
-  const BADGES = { ok: ['inv-badge--ok', 'In stock'], low: ['inv-badge--low', 'Low stock'], out: ['inv-badge--out', 'Out of stock'] };
-
-  function renderTable() {
-    const rows = filtered();
-    $('productRows').innerHTML = rows.map(p => {
-      const lvl = stockLevel(p), b = BADGES[lvl];
-      return `<tr class="${lvl !== 'ok' ? 'is-low' : ''}">
-        <td>#${p.id}</td><td><strong>${esc(p.name)}</strong></td><td>${esc(p.category)}</td>
-        <td class="num">${money(p.price)}</td><td class="num">${p.stock}</td>
-        <td><span class="inv-badge ${b[0]}">${b[1]}</span></td>
-        <td class="actions">
-          <button type="button" class="inv-btn inv-btn--small" data-action="edit" data-id="${p.id}">Edit</button>
-          <button type="button" class="inv-btn inv-btn--small inv-btn--danger" data-action="delete" data-id="${p.id}">Delete</button>
-        </td></tr>`;
-    }).join('');
-
-    const empty = $('emptyState'), btn = $('emptyAction');
-    empty.hidden = rows.length > 0;
-    document.querySelector('.inv-table-wrap').hidden = rows.length === 0;
-    if (rows.length === 0) {
-      if (state.products.length === 0) {
-        $('emptyTitle').textContent = 'No products yet';
-        $('emptyText').textContent = 'Add your first product to start tracking stock.';
-        btn.textContent = '+ Add product'; btn.dataset.mode = 'add';
-      } else {
-        $('emptyTitle').textContent = 'No matching products';
-        $('emptyText').textContent = 'Try a different name or category, or clear the filters.';
-        btn.textContent = 'Clear filters'; btn.dataset.mode = 'clear';
-      }
-    }
-  }
-
-  /* ---------- add / edit form ---------- */
-  const dialog = $('productDialog');
-  const fields = { name: $('fName'), category: $('fCategory'), price: $('fPrice'), stock: $('fStock'), expiry: $('fExpiry'), batchNo: $('fBatchNo') };
-  const errorIds = { name: 'eName', category: 'eCategory', price: 'ePrice', stock: 'eStock', expiry: 'eExpiry', batchNo: 'eBatchNo' };
-
-  function clearErrors() {
-    Object.keys(errorIds).forEach(k => { $(errorIds[k]).textContent = ''; fields[k].closest('.inv-field').classList.remove('has-error'); });
-  }
-
-  function openForm(product) {
-    clearErrors();
-    $('productForm').reset();
-    $('dialogTitle').textContent = product ? 'Edit product' : 'Add product';
-    $('saveBtn').textContent = product ? 'Save changes' : 'Save product';
-    $('fId').value = product ? product.id : '';
-    $('expiryRow').hidden = !!product;   // expiry is entered when adding; existing batches are managed in Expiry Management
-    if (product) {
-      fields.name.value = product.name; fields.category.value = product.category;
-      fields.price.value = product.price; fields.stock.value = product.stock;
-    }
-    dialog.showModal();
-    fields.name.focus();
-  }
-
-  function validate(data, editingId) {
-    const errors = {};
-    if (data.name.length < 2) errors.name = 'Enter a product name (at least 2 characters).';
-    else if (data.name.length > 60) errors.name = 'Name must be 60 characters or fewer.';
-    if (!data.category) errors.category = 'Choose or enter a category.';
-    if (!Number.isFinite(data.price) || data.price <= 0) errors.price = 'Enter a price greater than 0.';
-    else if (data.price > 1000000) errors.price = 'Price is too large.';
-    if (!Number.isInteger(data.stock) || data.stock < 0) errors.stock = 'Enter a whole number, 0 or more.';
-    else if (data.stock > 100000) errors.stock = 'Stock quantity is too large.';
-    if (!errors.name && !errors.category) {
-      const dup = state.products.some(p => p.id !== editingId &&
-        p.name.toLowerCase() === data.name.toLowerCase() && p.category.toLowerCase() === data.category.toLowerCase());
-      if (dup) errors.name = 'This product already exists in that category.';
-    }
-    return errors;
-  }
-
-  /* Expiry date + batch number (optional). Kept OUT of the product object so the
-     product contract { id, name, category, price, stock } is unchanged. The date is
-     stored as a batch through js/expiry-core.js. */
-  function validateExpiry(extra, data) {
-    const errors = {};
-    if (!extra.expiry && !extra.batchNo) return errors;
-    if (typeof SmartMartExpiry === 'undefined') { errors.expiry = 'Expiry module is not loaded on this page.'; return errors; }
-    if (!extra.expiry) errors.expiry = 'Enter the expiry date for this batch.';
-    else if (!/^\d{4}-\d{2}-\d{2}$/.test(extra.expiry) || Number.isNaN(Date.parse(extra.expiry))) errors.expiry = 'Enter a valid date.';
-    else if (SmartMartExpiry.daysBetween(SmartMartExpiry.today(), extra.expiry) < 0) errors.expiry = 'Expiry date cannot be in the past.';
-    if (extra.batchNo && !/^[A-Za-z0-9][A-Za-z0-9-]{1,19}$/.test(extra.batchNo)) errors.batchNo = 'Use 2–20 letters, numbers or hyphens.';
-    if (extra.expiry && !errors.expiry && !(data.stock >= 1)) errors.stock = 'Enter a stock quantity of 1 or more to record an expiry date.';
-    return errors;
-  }
-
-  function saveExpiryBatch(product, extra) {
-    if (!extra.expiry || typeof SmartMartExpiry === 'undefined') return;
-    const prefix = (product.name.match(/[A-Za-z]+/) || ['BAT'])[0].toUpperCase().slice(0, 4);
-    const result = SmartMartExpiry.addBatch({
-      productId: product.id,
-      batchNo: extra.batchNo || prefix + '101',
-      qty: product.stock,
-      expiryDate: extra.expiry
-    });
-    if (!result.ok) toast('Product saved, but the expiry date could not be recorded: ' + Object.values(result.errors).join(' '), true);
-  }
-
-  function onSubmit(e) {
-    e.preventDefault();
-    clearErrors();
-    const editingId = $('fId').value ? Number($('fId').value) : null;
-    const data = {
-      name: fields.name.value.trim().replace(/\s+/g, ' '),
-      category: fields.category.value.trim().replace(/\s+/g, ' '),
-      price: fields.price.value === '' ? NaN : Number(fields.price.value),
-      stock: fields.stock.value === '' ? NaN : Number(fields.stock.value)
+    const state = {
+        products: [],
+        query: "",
+        category: "all",
+        lowOnly: false,
+        threshold: DEFAULT_THRESHOLD
     };
-    // Reuse the existing category spelling/casing if the user typed one that already exists.
-    const existing = state.products.find(p => p.category.toLowerCase() === data.category.toLowerCase());
-    if (existing) data.category = existing.category;
 
-    const errors = validate(data, editingId);
-    const extra = editingId ? {} : { expiry: fields.expiry.value.trim(), batchNo: fields.batchNo.value.trim() };
-    if (!editingId) Object.assign(errors, validateExpiry(extra, data));
-    const keys = Object.keys(errors);
-    if (keys.length) {
-      keys.forEach(k => { $(errorIds[k]).textContent = errors[k]; fields[k].closest('.inv-field').classList.add('has-error'); });
-      fields[keys[0]].focus();
-      toast('Please fix the highlighted fields.', true);
-      return;
+    const $ = id => document.getElementById(id);
+
+    let toastTimer;
+    let saving = false;
+
+    // ------------------------------------------
+    // HELPERS
+    // ------------------------------------------
+
+    const esc = value =>
+        String(value).replace(
+            /[&<>"']/g,
+            char => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            }[char])
+        );
+
+    const money = value =>
+        "₹" + Number(value).toLocaleString("en-IN", {
+            maximumFractionDigits: 2
+        });
+
+    const stockLevel = product => {
+        if (product.stock <= 0) {
+            return "out";
+        }
+
+        if (product.stock <= state.threshold) {
+            return "low";
+        }
+
+        return "ok";
+    };
+
+    function toast(message, isError = false) {
+        const element = $("toast");
+
+        element.textContent = message;
+        element.classList.toggle("is-error", isError);
+        element.hidden = false;
+
+        clearTimeout(toastTimer);
+
+        toastTimer = setTimeout(() => {
+            element.hidden = true;
+        }, 3200);
     }
 
-    if (editingId) {
-      const p = state.products.find(x => x.id === editingId);
-      if (!p) { toast('That product no longer exists.', true); dialog.close(); return; }
-      Object.assign(p, data);
-      if (persist(`Updated “${p.name}”.`)) { dialog.close(); render(); }
-    } else {
-      const product = { id: nextId(), ...data };
-      state.products.push(product);
-      if (persist(`Added “${product.name}”.`)) { saveExpiryBatch(product, extra); dialog.close(); render(); }
-      else state.products.pop();
+    // ------------------------------------------
+    // SQLITE API
+    // ------------------------------------------
+
+    async function getProducts() {
+        const response = await fetch(API_URL, {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                "Unable to retrieve products from SQLite."
+            );
+        }
+
+        const products = await response.json();
+
+        if (!Array.isArray(products)) {
+            throw new Error(
+                "Invalid product data received from API."
+            );
+        }
+
+        return products;
     }
-  }
 
-  function deleteProduct(id) {
-    const p = state.products.find(x => x.id === id);
-    if (!p || !window.confirm(`Delete “${p.name}”? This cannot be undone.`)) return;
-    state.products = state.products.filter(x => x.id !== id);
-    persist(`Deleted “${p.name}”.`);
-    render();
-  }
+    async function updateProduct(product) {
+        const response = await fetch(
+            `${API_URL}/${product.id}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(product)
+            }
+        );
 
-  /* ---------- events ---------- */
-  function clearFilters() {
-    state.query = ''; state.category = 'all'; state.lowOnly = false;
-    $('searchInput').value = '';
-    render();
-  }
+        if (!response.ok) {
+            let message = "Unable to update product.";
 
-  function init() {
-    state.products = ProductStore.getProducts();
-    const saved = Number(localStorage.getItem(THRESHOLD_KEY));
-    state.threshold = Number.isInteger(saved) && saved > 0 ? saved : DEFAULT_THRESHOLD;
-    $('thresholdInput').value = state.threshold;
+            try {
+                const result = await response.json();
 
-    $('addBtn').addEventListener('click', () => openForm(null));
-    $('searchInput').addEventListener('input', e => { state.query = e.target.value; renderTable(); });
-    $('categoryFilter').addEventListener('change', e => { state.category = e.target.value; renderTable(); });
-    $('clearBtn').addEventListener('click', clearFilters);
-    $('lowToggle').addEventListener('click', () => { state.lowOnly = !state.lowOnly; render(); });
-    $('emptyAction').addEventListener('click', e => (e.currentTarget.dataset.mode === 'add' ? openForm(null) : clearFilters()));
-    $('thresholdInput').addEventListener('change', e => {
-      const v = Number(e.target.value);
-      if (!Number.isInteger(v) || v < 1 || v > 1000) { toast('Threshold must be a whole number from 1 to 1000.', true); e.target.value = state.threshold; return; }
-      state.threshold = v;
-      try { localStorage.setItem(THRESHOLD_KEY, String(v)); } catch (err) { /* ignore */ }
-      toast(`Low-stock threshold set to ${v}.`);
-      render();
-    });
-    $('productRows').addEventListener('click', e => {
-      const btn = e.target.closest('button[data-action]');
-      if (!btn) return;
-      const id = Number(btn.dataset.id);
-      if (btn.dataset.action === 'edit') openForm(state.products.find(p => p.id === id));
-      else deleteProduct(id);
-    });
-    $('productForm').addEventListener('submit', onSubmit);
-    $('cancelBtn').addEventListener('click', () => dialog.close());
-    dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
-    window.addEventListener('storage', e => { if (e.key === PRODUCTS_KEY) { state.products = ProductStore.getProducts(); render(); } });
+                if (result.error) {
+                    message = result.error;
+                } else if (result.errors) {
+                    message = Object.values(
+                        result.errors
+                    ).join(" ");
+                }
+            } catch (error) {
+                // Keep default error message
+            }
 
-    render();
-  }
+            throw new Error(message);
+        }
 
-  init();
+        return response.json();
+    }
+
+    async function refreshInventory() {
+        state.products = await getProducts();
+        render();
+    }
+
+    // ------------------------------------------
+    // RENDER DASHBOARD
+    // ------------------------------------------
+
+    function render() {
+        renderCategories();
+        renderStats();
+        renderTable();
+    }
+
+    function renderCategories() {
+        const categories = [
+            ...new Set(
+                state.products.map(product => product.category)
+            )
+        ].sort((a, b) => a.localeCompare(b));
+
+        if (
+            state.category !== "all" &&
+            !categories.includes(state.category)
+        ) {
+            state.category = "all";
+        }
+
+        $("categoryFilter").innerHTML =
+            '<option value="all">All categories</option>' +
+            categories.map(category => `
+                <option value="${esc(category)}"
+                    ${category === state.category ? "selected" : ""}>
+                    ${esc(category)}
+                </option>
+            `).join("");
+
+        $("categoryList").innerHTML =
+            categories.map(category => `
+                <option value="${esc(category)}">
+            `).join("");
+    }
+
+    function renderStats() {
+        const products = state.products;
+
+        const low = products.filter(
+            product => stockLevel(product) !== "ok"
+        );
+
+        const totalUnits = products.reduce(
+            (sum, product) => sum + Number(product.stock),
+            0
+        );
+
+        const totalValue = products.reduce(
+            (sum, product) =>
+                sum + Number(product.stock) *
+                Number(product.price),
+            0
+        );
+
+        $("statProducts").textContent = products.length;
+
+        $("statUnits").textContent =
+            totalUnits.toLocaleString("en-IN");
+
+        $("statLow").textContent = low.length;
+
+        $("statValue").textContent = money(totalValue);
+
+        const banner = $("lowBanner");
+
+        banner.hidden = low.length === 0;
+
+        if (low.length > 0) {
+            const outOfStock = low.filter(
+                product => product.stock <= 0
+            ).length;
+
+            $("lowBannerText").textContent =
+                `${low.length} product(s) need restocking` +
+                (
+                    outOfStock > 0
+                        ? ` (${outOfStock} out of stock).`
+                        : "."
+                );
+
+            $("lowToggle").textContent =
+                state.lowOnly
+                    ? "Show all products"
+                    : "Show only low stock";
+
+        } else {
+            state.lowOnly = false;
+        }
+    }
+
+    function filtered() {
+        const query = state.query
+            .trim()
+            .toLowerCase();
+
+        return state.products.filter(product => {
+            const matchesName =
+                !query ||
+                product.name.toLowerCase().includes(query);
+
+            const matchesCategory =
+                state.category === "all" ||
+                product.category === state.category;
+
+            const matchesStock =
+                !state.lowOnly ||
+                stockLevel(product) !== "ok";
+
+            return (
+                matchesName &&
+                matchesCategory &&
+                matchesStock
+            );
+        });
+    }
+
+    const BADGES = {
+        ok: ["inv-badge--ok", "In stock"],
+        low: ["inv-badge--low", "Low stock"],
+        out: ["inv-badge--out", "Out of stock"]
+    };
+
+    function renderTable() {
+        const products = filtered();
+
+        $("productRows").innerHTML = products.map(product => {
+            const level = stockLevel(product);
+            const badge = BADGES[level];
+
+            return `
+                <tr class="${level !== "ok" ? "is-low" : ""}">
+                    <td>#${product.id}</td>
+
+                    <td>
+                        <strong>${esc(product.name)}</strong>
+                    </td>
+
+                    <td>${esc(product.category)}</td>
+
+                    <td class="num">
+                        ${money(product.price)}
+                    </td>
+
+                    <td class="num">
+                        ${product.stock}
+                    </td>
+
+                    <td>
+                        <span class="inv-badge ${badge[0]}">
+                            ${badge[1]}
+                        </span>
+                    </td>
+
+                    <td class="actions">
+                        <button
+                            type="button"
+                            class="inv-btn inv-btn--small"
+                            data-action="edit"
+                            data-id="${product.id}">
+                            Edit
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+
+        const empty = $("emptyState");
+
+        empty.hidden = products.length > 0;
+
+        document.querySelector(
+            ".inv-table-wrap"
+        ).hidden = products.length === 0;
+
+        if (products.length === 0) {
+            if (state.products.length === 0) {
+                $("emptyTitle").textContent =
+                    "No products available";
+
+                $("emptyText").textContent =
+                    "Unable to display inventory products.";
+
+                $("emptyAction").hidden = true;
+            } else {
+                $("emptyTitle").textContent =
+                    "No matching products";
+
+                $("emptyText").textContent =
+                    "Try another name or category.";
+
+                $("emptyAction").hidden = false;
+                $("emptyAction").textContent =
+                    "Clear filters";
+            }
+        }
+    }
+
+    // ------------------------------------------
+    // EDIT PRODUCT FORM
+    // ------------------------------------------
+
+    const dialog = $("productDialog");
+
+    const fields = {
+        name: $("fName"),
+        category: $("fCategory"),
+        price: $("fPrice"),
+        stock: $("fStock")
+    };
+
+    const errorIds = {
+        name: "eName",
+        category: "eCategory",
+        price: "ePrice",
+        stock: "eStock"
+    };
+
+    function clearErrors() {
+        Object.keys(errorIds).forEach(key => {
+            $(errorIds[key]).textContent = "";
+
+            fields[key]
+                .closest(".inv-field")
+                .classList.remove("has-error");
+        });
+    }
+
+    function openForm(product) {
+        if (!product) {
+            toast(
+                "The SmartMart catalog is fixed to 15 products.",
+                true
+            );
+            return;
+        }
+
+        clearErrors();
+
+        $("productForm").reset();
+
+        $("dialogTitle").textContent = "Edit product";
+        $("saveBtn").textContent = "Save changes";
+
+        $("fId").value = product.id;
+
+        fields.name.value = product.name;
+        fields.category.value = product.category;
+        fields.price.value = product.price;
+        fields.stock.value = product.stock;
+
+        // Preserve ML product identity and category
+        fields.name.readOnly = true;
+        fields.category.readOnly = true;
+
+        dialog.showModal();
+
+        fields.stock.focus();
+    }
+
+    function validate(data) {
+        const errors = {};
+
+        if (
+            !Number.isFinite(data.price) ||
+            data.price <= 0
+        ) {
+            errors.price = "Enter a valid price greater than 0.";
+        } else if (data.price > 1000000) {
+            errors.price = "Price is too large.";
+        }
+
+        if (
+            !Number.isInteger(data.stock) ||
+            data.stock < 0
+        ) {
+            errors.stock =
+                "Stock must be a whole number, 0 or more.";
+        } else if (data.stock > 100000) {
+            errors.stock = "Stock quantity is too large.";
+        }
+
+        return errors;
+    }
+
+    async function onSubmit(event) {
+        event.preventDefault();
+
+        if (saving) {
+            return;
+        }
+
+        clearErrors();
+
+        const id = Number($("fId").value);
+
+        const existingProduct = state.products.find(
+            product => product.id === id
+        );
+
+        if (!existingProduct) {
+            toast("Product not found.", true);
+            return;
+        }
+
+        // Keep ID, name and category unchanged
+        const updatedProduct = {
+            id: existingProduct.id,
+            name: existingProduct.name,
+            category: existingProduct.category,
+            price: fields.price.value === ""
+                ? NaN
+                : Number(fields.price.value),
+            stock: fields.stock.value === ""
+                ? NaN
+                : Number(fields.stock.value)
+        };
+
+        const errors = validate(updatedProduct);
+        const keys = Object.keys(errors);
+
+        if (keys.length > 0) {
+            keys.forEach(key => {
+                $(errorIds[key]).textContent = errors[key];
+
+                fields[key]
+                    .closest(".inv-field")
+                    .classList.add("has-error");
+            });
+
+            fields[keys[0]].focus();
+
+            toast("Please fix the highlighted fields.", true);
+            return;
+        }
+
+        saving = true;
+        $("saveBtn").disabled = true;
+
+        try {
+            // Save changes to SQLite
+            await updateProduct(updatedProduct);
+
+            // Refresh inventory from the database
+            await refreshInventory();
+
+            dialog.close();
+
+            toast(
+                `Updated "${updatedProduct.name}" successfully.`
+            );
+
+        } catch (error) {
+            toast(error.message, true);
+
+        } finally {
+            saving = false;
+            $("saveBtn").disabled = false;
+        }
+    }
+
+    // ------------------------------------------
+    // FILTER CONTROLS
+    // ------------------------------------------
+
+    function clearFilters() {
+        state.query = "";
+        state.category = "all";
+        state.lowOnly = false;
+
+        $("searchInput").value = "";
+
+        render();
+    }
+
+    // ------------------------------------------
+    // INITIALIZATION
+    // ------------------------------------------
+
+    async function init() {
+        // Fixed 15-product catalog:
+        // disable product creation
+        $("addBtn").hidden = true;
+        $("emptyAction").hidden = true;
+
+        // Load saved low-stock threshold
+        const saved = Number(
+            localStorage.getItem(THRESHOLD_KEY)
+        );
+
+        state.threshold =
+            Number.isInteger(saved) && saved > 0
+                ? saved
+                : DEFAULT_THRESHOLD;
+
+        $("thresholdInput").value = state.threshold;
+
+        // Search
+        $("searchInput").addEventListener(
+            "input",
+            event => {
+                state.query = event.target.value;
+                renderTable();
+            }
+        );
+
+        // Category filtering
+        $("categoryFilter").addEventListener(
+            "change",
+            event => {
+                state.category = event.target.value;
+                renderTable();
+            }
+        );
+
+        // Clear filters
+        $("clearBtn").addEventListener(
+            "click",
+            clearFilters
+        );
+
+        $("emptyAction").addEventListener(
+            "click",
+            clearFilters
+        );
+
+        // Low-stock toggle
+        $("lowToggle").addEventListener(
+            "click",
+            () => {
+                state.lowOnly = !state.lowOnly;
+                render();
+            }
+        );
+
+        // Change low-stock threshold
+        $("thresholdInput").addEventListener(
+            "change",
+            event => {
+                const value = Number(event.target.value);
+
+                if (
+                    !Number.isInteger(value) ||
+                    value < 1 ||
+                    value > 1000
+                ) {
+                    toast(
+                        "Threshold must be between 1 and 1000.",
+                        true
+                    );
+
+                    event.target.value = state.threshold;
+                    return;
+                }
+
+                state.threshold = value;
+
+                try {
+                    localStorage.setItem(
+                        THRESHOLD_KEY,
+                        String(value)
+                    );
+                } catch (error) {
+                    // Threshold still works for this session
+                }
+
+                toast(
+                    `Low-stock threshold set to ${value}.`
+                );
+
+                render();
+            }
+        );
+
+        // Edit product
+        $("productRows").addEventListener(
+            "click",
+            event => {
+                const button = event.target.closest(
+                    "button[data-action]"
+                );
+
+                if (!button) {
+                    return;
+                }
+
+                if (button.dataset.action === "edit") {
+                    const id = Number(button.dataset.id);
+
+                    const product = state.products.find(
+                        item => item.id === id
+                    );
+
+                    openForm(product);
+                }
+            }
+        );
+
+        // Save product changes
+        $("productForm").addEventListener(
+            "submit",
+            onSubmit
+        );
+
+        // Cancel editing
+        $("cancelBtn").addEventListener(
+            "click",
+            () => {
+                if (!saving) {
+                    dialog.close();
+                }
+            }
+        );
+
+        // Close dialog on backdrop click
+        dialog.addEventListener(
+            "click",
+            event => {
+                if (event.target === dialog && !saving) {
+                    dialog.close();
+                }
+            }
+        );
+
+        // Load inventory from SQLite
+        try {
+            await refreshInventory();
+        } catch (error) {
+            console.error(
+                "Inventory initialization failed:",
+                error
+            );
+
+            render();
+
+            toast(
+                "Cannot connect to SmartMart backend. " +
+                "Start the Express server on port 3000.",
+                true
+            );
+        }
+    }
+
+    init();
 })();
