@@ -1,3 +1,4 @@
+
 {
   "name": "smartmart-inventory-api",
   "version": "1.0.0",
@@ -9,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^13.2.0",
+    "dotenv": "^18.0.10",
     "express": "^4.22.3"
   }
 }

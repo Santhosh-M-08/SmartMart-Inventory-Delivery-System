@@ -1,4 +1,3 @@
-
 -- SmartMart SQLite Database Schema
 
 -- PRODUCTS

@@ -1,4 +1,5 @@
 
+
 /*
  * SmartMart Inventory REST API
  * Database: SQLite
@@ -9,7 +10,8 @@
 
 const express = require("express");
 const { initializeDatabase } = require("./database/db");
-
+const { mountExpiry } = require("./expiry");
+const { syncProducts } = require("./expiry/models");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -541,6 +543,25 @@ const ORDER_STATUSES = [
     "Cancelled"
 ];
 
+// ------------------------------------------
+// EXPIRY MANAGEMENT - SQLITE
+// ------------------------------------------
+
+const expiryContext = {
+    readProducts() {
+        return db.prepare(`
+            SELECT id, name, category, price, stock
+            FROM products
+            ORDER BY id
+        `).all();
+    },
+
+    writeProducts(products) {
+        syncProducts(products);
+    }
+};
+
+mountExpiry(app, expiryContext);
 
 app.put("/api/orders/:id/status", (req, res) => {
     const orderId = Number(req.params.id);

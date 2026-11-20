@@ -22,12 +22,13 @@
     }
   };
 
-  const navItems = [
-    { href: 'index.html', label: 'Dashboard', icon: '▦' },
-    { href: 'inventory.html', label: 'Inventory', icon: '▤' },
-    { href: 'delivery.html', label: 'Orders & Delivery', icon: '⇄' },
-    { href: 'stock-intelligence.html', label: 'AI Stock Intelligence', icon: '◈' }
-  ];
+ const navItems = [
+  { href: 'index.html', label: 'Dashboard', icon: '▦' },
+  { href: 'inventory.html', label: 'Inventory', icon: '▤' },
+  { href: 'delivery.html', label: 'Orders & Delivery', icon: '⇄' },
+  { href: 'stock-intelligence.html', label: 'AI Stock Intelligence', icon: '◈' },
+  { href: 'expiry.html', label: 'Expiry Management', icon: '◷' }
+];
 
   function make(tag, className, text) {
     const element = document.createElement(tag);

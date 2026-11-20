@@ -1,10 +1,23 @@
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+Backend/.env
+!Backend/.env.example
 # Node.js dependencies
 node_modules/
+Backend/node_modules/
 
 # SQLite database files
 *.db
 *.db-shm
 *.db-wal
+Backend/database/*.sqlite
+Backend/database/*.sqlite3
+
+# Local migration backup
+SmartMart-before-sqlite-migration/
 
 # Python cache and environments
 __pycache__/
@@ -12,9 +25,8 @@ __pycache__/
 .venv/
 venv/
 
-# Environment variables and secrets
-.env
-.env.*
+# Logs
+*.log
 
 # VS Code local settings
 .vscode/
@@ -23,4 +35,5 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Backend backups
 Backend/backups/
