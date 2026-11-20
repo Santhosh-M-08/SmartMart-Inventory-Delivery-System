@@ -1,0 +1,698 @@
+/* Prevent flash of the previous page layout before shared navigation mounts.
+   If JavaScript fails to load, display the original page after two seconds. */
+@keyframes sm-ui-fallback { to { visibility: visible; } }
+body:not(.sm-unified-page) {
+  visibility: hidden;
+  animation: sm-ui-fallback 0s 2s forwards;
+}
+
+/*
+ * SmartMart unified frontend skin
+ * Matches Dashboard (index.html / css/dashboard.css) without modifying
+ * Inventory, Delivery, or Stock Intelligence business logic.
+ * Include LAST after each page's original CSS.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+body.sm-unified-page {
+  --sm-primary: #166534;
+  --sm-accent: #22c55e;
+  --sm-background: #f8fafc;
+  --sm-surface: #ffffff;
+  --sm-text: #1f2937;
+  --sm-muted: #64748b;
+  --sm-border: #e2e8f0;
+  --sm-sidebar-width: 245px;
+  margin: 0;
+  background: var(--sm-background);
+  color: var(--sm-text);
+  font: 14px/1.5 "Inter", Arial, sans-serif;
+}
+body.sm-unified-page *,
+body.sm-unified-page *::before,
+body.sm-unified-page *::after { box-sizing: border-box; }
+body.sm-unified-page [hidden] { display: none !important; }
+body.sm-unified-page a { text-decoration: none; }
+body.sm-unified-page button { cursor: pointer; }
+body.sm-unified-page button:focus-visible,
+body.sm-unified-page a:focus-visible,
+body.sm-unified-page input:focus-visible,
+body.sm-unified-page select:focus-visible {
+  outline: 3px solid var(--sm-accent);
+  outline-offset: 2px;
+}
+
+/* 1. Identical dashboard-style sidebar on all three feature pages */
+body.sm-unified-page .sm-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  width: var(--sm-sidebar-width);
+  height: 100vh;
+  padding: 27px 17px 18px;
+  overflow-y: auto;
+  background: var(--sm-surface);
+  border-right: 1px solid var(--sm-border);
+  transform: none;
+}
+body.sm-unified-page .sm-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 9px;
+  color: var(--sm-primary);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+body.sm-unified-page .sm-brand-mark {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--sm-primary);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+}
+body.sm-unified-page .sm-nav-heading {
+  margin: 40px 10px 12px;
+  color: var(--sm-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+}
+body.sm-unified-page .sm-nav { display: grid; gap: 7px; }
+body.sm-unified-page .sm-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 45px;
+  padding: 11px 13px;
+  border-radius: 9px;
+  color: var(--sm-muted);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background .18s ease, color .18s ease;
+}
+body.sm-unified-page .sm-nav-link:hover {
+  background: #f1f5f9;
+  color: var(--sm-primary);
+}
+body.sm-unified-page .sm-nav-link.active {
+  background: #dcfce7;
+  color: var(--sm-primary);
+  font-weight: 600;
+}
+body.sm-unified-page .sm-nav-icon {
+  display: inline-grid;
+  flex: 0 0 20px;
+  width: 20px;
+  place-items: center;
+  font-size: 19px;
+  line-height: 1;
+}
+body.sm-unified-page .sm-sidebar-bottom { margin-top: auto; padding-top: 20px; }
+body.sm-unified-page .sm-sidebar-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 10px;
+  border-top: 1px solid var(--sm-border);
+}
+body.sm-unified-page .sm-note-dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sm-accent);
+}
+body.sm-unified-page .sm-system-info { display: grid; gap: 2px; }
+body.sm-unified-page .sm-system-info strong { font-size: 12px; }
+body.sm-unified-page .sm-system-info span { color: var(--sm-muted); font-size: 11px; }
+body.sm-unified-page .sm-logout-button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  margin-top: 7px;
+  padding: 11px 13px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sm-muted);
+  text-align: left;
+  font: inherit;
+}
+body.sm-unified-page .sm-logout-button:hover { background: #fef2f2; color: #dc2626; }
+body.sm-unified-page .sm-sidebar-overlay { display: none; }
+
+/* 2. Common 84px top bar + aligned content edges */
+body.sm-unified-page .app-layout,
+body.sm-unified-page .inv-shell { display: block; min-height: 100vh; }
+body.sm-unified-page .main-content,
+body.sm-unified-page .inv-content {
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: var(--sm-sidebar-width);
+  background: var(--sm-background);
+}
+body.sm-unified-page .sm-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 84px;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--sm-border);
+  background: rgba(255,255,255,.96);
+  color: var(--sm-text);
+  backdrop-filter: blur(10px);
+}
+body.sm-unified-page .sm-topbar-left,
+body.sm-unified-page .sm-topbar-right { display: flex; align-items: center; gap: 15px; }
+body.sm-unified-page .sm-topbar-heading .sm-eyebrow {
+  margin: 0 0 3px;
+  color: var(--sm-muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 1.25px;
+  opacity: 1;
+}
+body.sm-unified-page .sm-topbar-heading h1 {
+  margin: 0;
+  color: var(--sm-text);
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -.7px;
+  line-height: 1.4;
+}
+body.sm-unified-page .sm-date-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sm-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+body.sm-unified-page .sm-date-icon { color: var(--sm-primary); font-size: 17px; }
+body.sm-unified-page .sm-user-avatar {
+  display: grid;
+  flex: 0 0 37px;
+  width: 37px;
+  height: 37px;
+  place-items: center;
+  border: 1px solid #bbf7d0;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: var(--sm-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+body.sm-unified-page .sm-menu-toggle {
+  display: none;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--sm-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--sm-text);
+  font: inherit;
+}
+body.sm-unified-page .inv-content > main.inv,
+body.sm-unified-page .main-content > .page-content,
+body.sm-unified-page .main-content > main {
+  width: 100%;
+  max-width: 1650px;
+  margin: 0 auto;
+  padding: 28px 32px 40px;
+}
+
+/* 3. Matching page introductions */
+body.sm-unified-page .sm-page-intro,
+body.sm-unified-page .sm-inventory-intro,
+body.sm-unified-page .sm-delivery-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 27px;
+  flex-wrap: wrap;
+}
+body.sm-unified-page .sm-page-intro h2,
+body.sm-unified-page .sm-inventory-intro h1,
+body.sm-unified-page .sm-delivery-intro h1 {
+  margin: 0 0 5px;
+  color: var(--sm-text);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -.5px;
+  line-height: 1.35;
+}
+body.sm-unified-page .sm-page-intro p,
+body.sm-unified-page .sm-inventory-intro p,
+body.sm-unified-page .sm-delivery-intro .page-description {
+  margin: 0;
+  color: var(--sm-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+body.sm-unified-page .sm-delivery-intro .eyebrow {
+  margin: 0 0 5px;
+  color: var(--sm-primary);
+  font-size: 10px;
+}
+body.sm-unified-page .sm-delivery-intro #openCreateDeliveryBtn {
+  align-self: center;
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 10px 17px;
+}
+
+/* 4. White dashboard summary cards: same border, typography and hover */
+body.sm-unified-page .inv-stats,
+body.sm-unified-page .summary-grid,
+body.sm-unified-page .stats {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 25px;
+}
+body.sm-unified-page .inv-stats,
+body.sm-unified-page .stats { grid-template-columns: repeat(4, minmax(0,1fr)); }
+body.sm-unified-page .summary-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+body.sm-unified-page .inv-stat,
+body.sm-unified-page .summary-card,
+body.sm-unified-page .stats > .card {
+  min-width: 0;
+  padding: 19px;
+  background: var(--sm-surface);
+  border: 1px solid var(--sm-border);
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(15,23,42,.025);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+body.sm-unified-page .inv-stat:hover,
+body.sm-unified-page .summary-card:hover,
+body.sm-unified-page .stats > .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 18px rgba(15,23,42,.06);
+}
+body.sm-unified-page .inv-stat > span,
+body.sm-unified-page .summary-label,
+body.sm-unified-page .stats > .card > span {
+  display: block;
+  color: var(--sm-muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+body.sm-unified-page .inv-stat > strong,
+body.sm-unified-page .summary-value,
+body.sm-unified-page .stats > .card > strong {
+  display: block;
+  margin: 13px 0 4px;
+  color: var(--sm-text);
+  font-size: 29px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -1px;
+  overflow-wrap: anywhere;
+}
+body.sm-unified-page .summary-note { color: var(--sm-muted); font-size: 11px; }
+body.sm-unified-page .summary-icon { width: 36px; height: 36px; border-radius: 10px; }
+
+/* 5. Panels and aligned filters */
+body.sm-unified-page .inv-card,
+body.sm-unified-page .orders-panel,
+body.sm-unified-page .table-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--sm-border);
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 5px rgba(15,23,42,.025);
+}
+body.sm-unified-page .inv-card { padding: 0; }
+body.sm-unified-page .inv-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 19px 20px;
+  margin: 0;
+  border-bottom: 1px solid var(--sm-border);
+}
+body.sm-unified-page .inv-field { min-width: 120px; }
+body.sm-unified-page .inv-field--grow { flex: 1 1 240px; min-width: 180px; }
+body.sm-unified-page .inv-field--narrow { min-width: 135px; max-width: 160px; }
+body.sm-unified-page .inv label { color: var(--sm-muted); font-size: 12px; }
+body.sm-unified-page .inv input,
+body.sm-unified-page .inv select,
+body.sm-unified-page .filter-bar input,
+body.sm-unified-page .filter-bar select {
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--sm-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--sm-text);
+  font: inherit;
+  font-size: 12px;
+}
+body.sm-unified-page .inv-btn,
+body.sm-unified-page .filter-bar button,
+body.sm-unified-page .toolbar button,
+body.sm-unified-page .toolbar .back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--sm-border);
+  background: white;
+  color: var(--sm-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+body.sm-unified-page .inv-btn--primary,
+body.sm-unified-page #refreshBtn {
+  background: var(--sm-primary) !important;
+  color: #fff !important;
+  border-color: var(--sm-primary) !important;
+}
+body.sm-unified-page .inv-btn:hover,
+body.sm-unified-page .filter-bar button:hover,
+body.sm-unified-page .toolbar .back-link:hover { background: #f1f5f9; }
+body.sm-unified-page .toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+}
+body.sm-unified-page .table-card { padding: 0; }
+body.sm-unified-page .table-card > h2 {
+  margin: 0;
+  padding: 19px 20px;
+  border-bottom: 1px solid var(--sm-border);
+  color: var(--sm-text);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+body.sm-unified-page .filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 19px 20px 10px;
+}
+body.sm-unified-page .filter-bar input { flex: 1 1 230px; min-width: 180px; }
+body.sm-unified-page .filter-bar select { flex: 0 1 auto; min-width: 140px; }
+body.sm-unified-page #filterCount { margin: 0; padding: 8px 20px 12px; font-size: 11px; }
+body.sm-unified-page #forecastDate { margin: 0 0 16px; font-size: 12px; color: var(--sm-muted); }
+body.sm-unified-page .notice { color: var(--sm-muted); font-size: 12px; line-height: 1.65; }
+body.sm-unified-page .table-card > #emptyFilterMessage { padding: 0 20px 20px; }
+
+/* 6. Aligned tables, without touching their rows or data */
+body.sm-unified-page .inv-table-wrap,
+body.sm-unified-page .table-wrapper,
+body.sm-unified-page .table-responsive { width: 100%; overflow-x: auto; }
+body.sm-unified-page .inv-table,
+body.sm-unified-page .orders-table,
+body.sm-unified-page .table-responsive table { width: 100%; border-collapse: collapse; }
+body.sm-unified-page .inv-table th,
+body.sm-unified-page .orders-table th,
+body.sm-unified-page .table-responsive th {
+  padding: 14px 15px;
+  background: #f8fafc;
+  color: var(--sm-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .35px;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+body.sm-unified-page .inv-table td,
+body.sm-unified-page .orders-table td,
+body.sm-unified-page .table-responsive td {
+  padding: 14px 15px;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 0;
+  color: var(--sm-text);
+  font-size: 12px;
+  vertical-align: middle;
+}
+body.sm-unified-page .inv-table .num { text-align: right; }
+body.sm-unified-page .inv-table td.actions { display: table-cell; text-align: right; }
+body.sm-unified-page .inv-table tbody tr:hover,
+body.sm-unified-page .orders-table tbody tr:hover,
+body.sm-unified-page .table-responsive tbody tr:hover { background: #f8fafc; }
+body.sm-unified-page .inv-table-wrap { padding: 0; }
+body.sm-unified-page .inv-empty { padding: 32px 16px; }
+body.sm-unified-page .table-responsive table { min-width: 680px; }
+body.sm-unified-page .table-responsive { padding: 0 20px 10px; }
+body.sm-unified-page .orders-table th { background: #f8fafc; }
+body.sm-unified-page .orders-table td { padding: 14px 15px; }
+body.sm-unified-page .panel-heading { padding: 19px 20px; }
+body.sm-unified-page .panel-heading h2 { font-size: 15px; }
+body.sm-unified-page .table-toolbar { padding: 0 20px 18px; }
+body.sm-unified-page .badge,
+body.sm-unified-page .inv-badge,
+body.sm-unified-page .status-badge { border-radius: 999px; font-size: 11px; }
+
+/* 7. Responsive layout mirrors the Dashboard breakpoints */
+@media (min-width: 1600px) {
+  body.sm-unified-page .summary-grid { grid-template-columns: repeat(6, minmax(0,1fr)); }
+}
+@media (max-width: 1200px) {
+  body.sm-unified-page .sm-topbar { padding-right: 22px; padding-left: 22px; }
+  body.sm-unified-page .inv-content > main.inv,
+  body.sm-unified-page .main-content > .page-content,
+  body.sm-unified-page .main-content > main { padding-right: 22px; padding-left: 22px; }
+  body.sm-unified-page .inv-stats,
+  body.sm-unified-page .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 900px) {
+  body.sm-unified-page .sm-sidebar {
+    width: 230px;
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+  }
+  body.sm-unified-page .sm-sidebar.sm-open { transform: translateX(0); }
+  body.sm-unified-page .sm-sidebar-overlay.sm-visible {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: block;
+    background: rgba(15,23,42,.38);
+  }
+  body.sm-unified-page .main-content,
+  body.sm-unified-page .inv-content { margin-left: 0; }
+  body.sm-unified-page .sm-menu-toggle { display: inline-grid; flex: 0 0 auto; }
+  body.sm-unified-page .summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 560px) {
+  body.sm-unified-page .sm-topbar { min-height: 72px; padding: 13px 15px; }
+  body.sm-unified-page .sm-topbar-heading h1 { font-size: 20px; }
+  body.sm-unified-page .sm-topbar-heading .sm-eyebrow { font-size: 9px; }
+  body.sm-unified-page .sm-date-display { display: none; }
+  body.sm-unified-page .sm-topbar-right { gap: 9px; }
+  body.sm-unified-page .inv-content > main.inv,
+  body.sm-unified-page .main-content > .page-content,
+  body.sm-unified-page .main-content > main { padding: 22px 14px 30px; }
+  body.sm-unified-page .sm-page-intro,
+  body.sm-unified-page .sm-inventory-intro,
+  body.sm-unified-page .sm-delivery-intro { align-items: flex-start; }
+  body.sm-unified-page .sm-page-intro h2,
+  body.sm-unified-page .sm-inventory-intro h1,
+  body.sm-unified-page .sm-delivery-intro h1 { font-size: 19px; }
+  body.sm-unified-page .inv-stats,
+  body.sm-unified-page .summary-grid,
+  body.sm-unified-page .stats { grid-template-columns: 1fr; gap: 11px; }
+  body.sm-unified-page .inv-stat,
+  body.sm-unified-page .summary-card,
+  body.sm-unified-page .stats > .card { padding: 16px; }
+  body.sm-unified-page .sm-delivery-intro #openCreateDeliveryBtn { width: 100%; }
+  body.sm-unified-page .inv-toolbar,
+  body.sm-unified-page .filter-bar { padding-right: 16px; padding-left: 16px; }
+  body.sm-unified-page .inv-field,
+  body.sm-unified-page .inv-field--grow,
+  body.sm-unified-page .inv-field--narrow { min-width: 0; max-width: none; flex: 1 1 100%; }
+  body.sm-unified-page .filter-bar input,
+  body.sm-unified-page .filter-bar select,
+  body.sm-unified-page .filter-bar button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.sm-unified-page *,
+  body.sm-unified-page *::before,
+  body.sm-unified-page *::after { transition-duration: .01ms !important; }
+}
+
+/* =========================================================
+   SmartMart table alignment pass — 20 Nov 2026
+   Fixed-width column tracks keep headers and values aligned,
+   independent of content length. Tables scroll on small screens.
+   No business logic, HTML IDs, or data are modified.
+   ========================================================= */
+
+/* Shared readable spacing and fixed, predictable column geometry. */
+body.sm-unified-page .inv-table,
+body.sm-unified-page .orders-table,
+body.sm-unified-page .table-responsive table {
+  table-layout: fixed;
+  width: 100%;
+}
+body.sm-unified-page .inv-table { min-width: 900px; }
+body.sm-unified-page .orders-table { min-width: 900px; }
+body.sm-unified-page .table-responsive table { min-width: 850px; }
+
+body.sm-unified-page .inv-table th,
+body.sm-unified-page .inv-table td,
+body.sm-unified-page .orders-table th,
+body.sm-unified-page .orders-table td,
+body.sm-unified-page .table-responsive th,
+body.sm-unified-page .table-responsive td {
+  padding-inline: 14px;
+  vertical-align: middle;
+}
+
+/* Inventory: ID | Name | Category | Price | Stock | Status | Actions */
+body.sm-unified-page .inv-table :is(th, td):nth-child(1) { width: 9%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(2) { width: 18%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(3) { width: 18%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(4) { width: 12%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(5) { width: 11%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(6) { width: 17%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(7) { width: 15%; }
+
+body.sm-unified-page .inv-table :is(th, td):nth-child(3),
+body.sm-unified-page .inv-table :is(th, td):nth-child(4),
+body.sm-unified-page .inv-table :is(th, td):nth-child(5),
+body.sm-unified-page .inv-table :is(th, td):nth-child(6),
+body.sm-unified-page .inv-table :is(th, td):nth-child(7) {
+  text-align: center;
+}
+/* Original inventory CSS aligns .num and .actions to the right; override it. */
+body.sm-unified-page .inv-table :is(th, td).num,
+body.sm-unified-page .inv-table :is(th, td).actions {
+  text-align: center;
+}
+body.sm-unified-page .inv-table td.actions { display: table-cell; }
+
+/* Stock Intelligence: Product | Stock | Demand | Days | Risk | Reorder */
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(1) { width: 19%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(2) { width: 15%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(3) { width: 18%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(4) { width: 14%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(5) { width: 16%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(6) { width: 18%; }
+body.sm-unified-page .table-responsive table :is(th, td):not(:first-child) {
+  text-align: center;
+}
+
+/* Delivery: Order ID | Customer | Items | Total | Date | Status | Action */
+body.sm-unified-page .orders-table :is(th, td):nth-child(1) { width: 11%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(2) { width: 20%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(3) { width: 10%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(4) { width: 13%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(5) { width: 14%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(6) { width: 15%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(7) { width: 17%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(n+3) { text-align: center; }
+
+/* Keep badges and actions visually centered in their assigned columns. */
+body.sm-unified-page .inv-table td .inv-badge,
+body.sm-unified-page .table-responsive td .badge,
+body.sm-unified-page .orders-table td .status-badge {
+  white-space: nowrap;
+}
+
+/* =============================================================
+   SmartMart table spacing refinement — 20 Nov 2026
+   Make table content scan naturally from left to right, with
+   tighter, intentional column positions and consistent padding.
+   This CSS-only change preserves table structure and JS hooks.
+   ============================================================= */
+
+/* One predictable inset for headers and values throughout the app. */
+body.sm-unified-page .inv-table :is(th, td),
+body.sm-unified-page .orders-table :is(th, td),
+body.sm-unified-page .table-responsive table :is(th, td) {
+  padding-inline: 16px;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+  text-align: left;
+}
+body.sm-unified-page .inv-table td,
+body.sm-unified-page .orders-table td,
+body.sm-unified-page .table-responsive table td {
+  padding-block: 13px;
+}
+
+/* Inventory: compact ID and Actions, roomy names, regular column rhythm. */
+body.sm-unified-page .inv-table :is(th, td):nth-child(1) { width: 9%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(2) { width: 19%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(3) { width: 18%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(4) { width: 13%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(5) { width: 12%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(6) { width: 16%; }
+body.sm-unified-page .inv-table :is(th, td):nth-child(7) { width: 13%; }
+body.sm-unified-page .inv-table :is(th, td).num { text-align: left; }
+body.sm-unified-page .inv-table :is(th, td).actions { text-align: center; }
+
+/* Intelligence: move numbers closer to their headings; risk has its own lane. */
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(1) { width: 18%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(2) { width: 16%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(3) { width: 20%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(4) { width: 15%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(5) { width: 15%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(6) { width: 16%; }
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(5) {
+  text-align: center;
+}
+
+/* Delivery: natural left alignment, with status and actions kept distinct. */
+body.sm-unified-page .orders-table :is(th, td):nth-child(1) { width: 11%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(2) { width: 21%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(3) { width: 11%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(4) { width: 14%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(5) { width: 15%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(6) { width: 15%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(7) { width: 13%; }
+body.sm-unified-page .orders-table :is(th, td):nth-child(7) { text-align: center; }
+
+/* Keep table scroll usable at narrow viewports rather than squeezing values. */
+body.sm-unified-page .inv-table { min-width: 880px; }
+body.sm-unified-page .table-responsive table { min-width: 840px; }
+body.sm-unified-page .orders-table { min-width: 900px; }
+
+/* Override prior centered-column rules at equal selector specificity. */
+body.sm-unified-page .inv-table :is(th, td):nth-child(n+3),
+body.sm-unified-page .orders-table :is(th, td):nth-child(n+3),
+body.sm-unified-page .table-responsive table :is(th, td):not(:first-child) {
+  text-align: left;
+}
+body.sm-unified-page .inv-table :is(th, td).num { text-align: left; }
+body.sm-unified-page .inv-table :is(th, td).actions,
+body.sm-unified-page .orders-table :is(th, td):nth-child(7),
+body.sm-unified-page .table-responsive table :is(th, td):nth-child(5) {
+  text-align: center;
+}
