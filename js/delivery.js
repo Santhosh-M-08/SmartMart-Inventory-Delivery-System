@@ -354,7 +354,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Save a status update through the shared data function.
-    saveStatusBtn.addEventListener("click", function () {
+    saveStatusBtn.addEventListener("click", async function () {
         if (selectedOrderId === null) {
             showToast("Please select an order first.", true);
             return;
@@ -370,7 +370,7 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
             const updatedOrderId = selectedOrderId;
 
-            updateOrderStatus(updatedOrderId, newStatus);
+            await updateOrderStatus(updatedOrderId, newStatus);
             refreshUI();
 
             closeOrderDetails();
@@ -532,13 +532,33 @@ function updateNewDeliveryTotal() {
 
 
 // Open the create-delivery modal.
-openCreateDeliveryBtn.addEventListener("click", function () {
-    createDeliveryForm.reset();
-    deliveryProductRows.replaceChildren();
-    updateNewDeliveryTotal();
-    createProductRow();
-    createDeliveryModal.showModal();
-});
+openCreateDeliveryBtn.addEventListener(
+    "click",
+    async function () {
+        openCreateDeliveryBtn.disabled = true;
+
+        try {
+            // Get current stock from SQLite.
+            await refreshData();
+
+            createDeliveryForm.reset();
+            deliveryProductRows.replaceChildren();
+
+            updateNewDeliveryTotal();
+            createProductRow();
+
+            createDeliveryModal.showModal();
+
+        } catch (error) {
+            showToast(
+                error.message || "Unable to load inventory.",
+                true
+            );
+        } finally {
+            openCreateDeliveryBtn.disabled = false;
+        }
+    }
+);
 
 
 // Add another product to the order.
@@ -562,7 +582,9 @@ cancelCreateDeliveryBtn.addEventListener(
 
 
 // Create and save the order.
-createDeliveryForm.addEventListener("submit", function (event) {
+createDeliveryForm.addEventListener(
+    "submit",
+    async function (event) {
     event.preventDefault();
 
     const customerName = deliveryCustomerName.value.trim();
@@ -630,7 +652,7 @@ createDeliveryForm.addEventListener("submit", function (event) {
     );
 
     try {
-        const newOrder = createOrder(customerName, items);
+        const newOrder = await createOrder(customerName, items);
 
         // Show the new order even if a search or filter was active.
         searchInput.value = "";
@@ -648,6 +670,23 @@ createDeliveryForm.addEventListener("submit", function (event) {
     }
 });
 
-    // Initial page load.
-    refreshUI();
+    // Initial page load from SQLite.
+    async function initializeDelivery() {
+        try {
+            await refreshData();
+            refreshUI();
+        } catch (error) {
+            console.error(
+                "Delivery initialization failed:",
+                error
+            );
+
+            showToast(
+                error.message || "Unable to load orders.",
+                true
+            );
+        }
+    }
+
+    initializeDelivery();
 });
