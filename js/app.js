@@ -8,8 +8,11 @@ document.addEventListener("DOMContentLoaded", function () {
     initializeLogout();
 });
 
-function initializeDashboard() {
+async function initializeDashboard() {
     try {
+        // Load products and orders from SQLite
+        await refreshData();
+
         const products = getProducts();
         const orders = getOrders();
 
@@ -19,8 +22,14 @@ function initializeDashboard() {
         renderRecentOrders(orders);
         renderRecentActivity(orders);
         renderCurrentDate();
+        await renderAIForecastSummary(products);
+
     } catch (error) {
-        console.error("Unable to load dashboard data:", error);
+        console.error(
+            "Unable to load dashboard data:",
+            error
+        );
+
         showDashboardError();
     }
 }
@@ -505,4 +514,108 @@ function initializeLogout() {
         sessionStorage.removeItem("smartmart_demo_logged_in");
         window.location.href = "login.html";
     });
+}
+
+
+async function renderAIForecastSummary(products) {
+    const note = document.getElementById("aiForecastNote");
+
+    try {
+        const response = await fetch(
+            "http://localhost:3000/api/predictions",
+            { cache: "no-store" }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to load forecasts.");
+        }
+
+        const forecasts = await response.json();
+
+        if (!Array.isArray(forecasts)) {
+            throw new Error("Invalid forecast data.");
+        }
+
+        const forecastMap = new Map(
+            forecasts.map(f => [
+                Number(f.product_id),
+                f
+            ])
+        );
+
+        let critical = 0;
+        let warning = 0;
+        let healthy = 0;
+        let unavailable = 0;
+
+        for (const product of products) {
+            const forecast = forecastMap.get(
+                Number(product.id)
+            );
+
+            if (!forecast) {
+                unavailable++;
+                continue;
+            }
+
+            const stock = Number(product.stock);
+            const demand = Number(
+                forecast.predicted_demand
+            );
+
+            if (
+                !Number.isFinite(stock) ||
+                stock < 0 ||
+                !Number.isFinite(demand) ||
+                demand < 0
+            ) {
+                unavailable++;
+                continue;
+            }
+
+            const daysLeft = demand === 0
+                ? Infinity
+                : stock / demand;
+
+            if (daysLeft <= 1) {
+                critical++;
+            } else if (daysLeft <= 3) {
+                warning++;
+            } else {
+                healthy++;
+            }
+        }
+
+        setText("aiCritical", critical);
+        setText("aiWarning", warning);
+        setText("aiHealthy", healthy);
+
+        const dates = [
+            ...new Set(
+                forecasts
+                    .map(f => f.prediction_date)
+                    .filter(Boolean)
+            )
+        ];
+
+        note.textContent =
+            `Historical demonstration forecast` +
+            (dates.length
+                ? ` (${dates.join(", ")})`
+                : "") +
+            (unavailable
+                ? ` · ${unavailable} unavailable`
+                : "") +
+            ". Based on synthetic sales data.";
+
+    } catch (error) {
+        console.error("AI forecast error:", error);
+
+        setText("aiCritical", "—");
+        setText("aiWarning", "—");
+        setText("aiHealthy", "—");
+
+        note.textContent =
+            "AI forecasts unavailable. Check the backend.";
+    }
 }
