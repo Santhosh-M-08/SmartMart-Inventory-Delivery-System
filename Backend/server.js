@@ -4,6 +4,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { syncProducts } = require('./expiry/models');
 
 // Load environment variables from Backend/.env
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -30,9 +31,14 @@ function readProducts() {
   catch (err) { writeProducts(SAMPLE); return SAMPLE.slice(); }
 }
 function writeProducts(list) {
+  syncProducts(list);
+
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
   fs.writeFileSync(DATA_FILE, JSON.stringify(list, null, 2));
 }
+// Sync existing products into SQLite when the server starts.
+syncProducts(readProducts());
+console.log('[SQLite] Products synchronized successfully.');
 
 function clean(body) {
   return {

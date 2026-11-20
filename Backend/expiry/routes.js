@@ -1,62 +1,144 @@
-/* SmartMart Expiry — REST routes (NEW FILE)  File: Backend/expiry/routes.js
-   Mounted at /api/expiry by expiry/index.js. Errors use the same shape as your products API:
-   { error: "message" }  or  { errors: { field: "message" } } */
+
 'use strict';
+
 const express = require('express');
-const mongoose = require('mongoose');
 const S = require('./service');
 const R = require('./rules');
+const { db } = require('./models');
 
 module.exports = function buildRouter(ctx) {
-  const router = express.Router();
-  const wrap = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
-  const validId = (req, res, next) => (mongoose.isValidObjectId(req.params.id) ? next() : res.status(400).json({ error: 'Invalid id.' }));
+    const router = express.Router();
 
-  // Health is always available so you can see the real database state (nothing is faked).
-  router.get('/health', (req, res) => res.json({
-    ok: mongoose.connection.readyState === 1,
-    database: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown',
-    today: R.todayISO(), timeZone: R.STORE_TZ
-  }));
+    const wrap = fn => (req, res, next) =>
+        Promise.resolve(fn(req, res, next)).catch(next);
 
-  router.use((req, res, next) => (mongoose.connection.readyState === 1 ? next()
-    : res.status(503).json({ error: 'Expiry database is not connected. Check MONGODB_URI and that MongoDB is running.' })));
+    const validId = (req, res, next) => {
+        const id = String(req.params.id || '');
 
-  /* settings */
-  router.get('/settings', wrap(async (req, res) => res.json(await S.getSettings())));
-  router.put('/settings', wrap(async (req, res) => res.json(await S.saveSettings(req.body, ctx))));
-  router.post('/settings/reset', wrap(async (req, res) => res.json(await S.resetSettings(ctx))));
+        if (!id || id.length > 100) {
+            return res.status(400).json({ error: 'Invalid id.' });
+        }
 
-  /* batches */
-  router.get('/batches', wrap(async (req, res) => res.json(await S.listBatches(ctx, req.query))));
-  router.post('/batches', wrap(async (req, res) => res.status(201).json(await S.addBatch(ctx, req.body || {}))));
-  router.get('/batches/:id', validId, wrap(async (req, res) => res.json(await S.getBatch(ctx, req.params.id))));
-  router.patch('/batches/:id/discount', validId, wrap(async (req, res) => res.json(await S.setOverride(ctx, req.params.id, req.body))));
-  router.post('/batches/:id/write-off', validId, wrap(async (req, res) => res.json(await S.writeOff(ctx, req.params.id))));
-  router.delete('/batches/:id', validId, wrap(async (req, res) => { await S.deleteBatch(req.params.id); res.sendStatus(204); }));
+        next();
+    };
 
-  /* dashboard + analytics */
-  router.get('/summary', wrap(async (req, res) => res.json(await S.summary(ctx))));
-  router.get('/analytics', wrap(async (req, res) => res.json(await S.analytics(ctx, ['all', 'actual', 'sample'].includes(req.query.scope) ? req.query.scope : 'all'))));
-  router.get('/suggestions', wrap(async (req, res) => res.json(await S.suggestions(ctx, Number(req.query.limit) || 6))));
+    router.get('/health', (req, res) => {
+        try {
+            db.prepare('SELECT 1').get();
 
-  /* notifications */
-  router.get('/notifications', wrap(async (req, res) => res.json(await S.listNotifications(req.query))));
-  router.post('/notifications/read-all', wrap(async (req, res) => res.json(await S.markAllRead())));
-  router.patch('/notifications/:id/read', validId, wrap(async (req, res) => res.json(await S.markRead(req.params.id))));
-  router.post('/sync', wrap(async (req, res) => res.json(await S.syncNotifications(ctx))));
+            res.json({
+                ok: true,
+                database: 'connected',
+                today: R.todayISO(),
+                timeZone: R.STORE_TZ
+            });
+        } catch (error) {
+            res.status(503).json({
+                ok: false,
+                database: 'disconnected'
+            });
+        }
+    });
 
-  /* storefront: offers, price validation, checkout */
-  router.get('/offers', wrap(async (req, res) => res.json(await S.offers(ctx))));
-  router.post('/quote', wrap(async (req, res) => res.json(await S.quote(ctx, req.body))));
-  router.post('/checkout', wrap(async (req, res) => res.status(201).json(await S.checkout(ctx, req.body || {}))));
+    router.get('/settings', wrap((req, res) =>
+        res.json(S.getSettings())
+    ));
 
-  router.use((req, res) => res.status(404).json({ error: 'Unknown expiry endpoint.' }));
-  router.use((err, req, res, next) => {                 // eslint-disable-line no-unused-vars
-    if (err instanceof S.HttpError) return res.status(err.status).json(err.errors ? { error: err.message, errors: err.errors } : { error: err.message });
-    if (err && err.code === 11000) return res.status(409).json({ error: 'Duplicate record.' });
-    console.error('[expiry]', err);
-    res.status(500).json({ error: 'Unexpected server error.' });
-  });
-  return router;
+    router.put('/settings', wrap((req, res) =>
+        res.json(S.saveSettings(req.body, ctx))
+    ));
+
+    router.post('/settings/reset', wrap((req, res) =>
+        res.json(S.resetSettings(ctx))
+    ));
+
+    router.get('/batches', wrap((req, res) =>
+        res.json(S.listBatches(ctx, req.query))
+    ));
+
+    router.post('/batches', wrap((req, res) =>
+        res.status(201).json(S.addBatch(ctx, req.body || {}))
+    ));
+
+    router.get('/batches/:id', validId, wrap((req, res) =>
+        res.json(S.getBatch(ctx, req.params.id))
+    ));
+
+    router.patch('/batches/:id/discount', validId, wrap((req, res) =>
+        res.json(S.setOverride(ctx, req.params.id, req.body))
+    ));
+
+    router.post('/batches/:id/write-off', validId, wrap((req, res) =>
+        res.json(S.writeOff(ctx, req.params.id))
+    ));
+
+    router.delete('/batches/:id', validId, wrap((req, res) => {
+        S.deleteBatch(req.params.id);
+        res.sendStatus(204);
+    }));
+
+    router.get('/summary', wrap((req, res) =>
+        res.json(S.summary(ctx))
+    ));
+
+    router.get('/analytics', wrap((req, res) =>
+        res.json(S.analytics(
+            ctx,
+            ['all', 'actual', 'sample'].includes(req.query.scope)
+                ? req.query.scope : 'all'
+        ))
+    ));
+
+    router.get('/suggestions', wrap((req, res) =>
+        res.json(S.suggestions(ctx, Number(req.query.limit) || 6))
+    ));
+
+    router.get('/notifications', wrap((req, res) =>
+        res.json(S.listNotifications(req.query))
+    ));
+
+    router.post('/notifications/read-all', wrap((req, res) =>
+        res.json(S.markAllRead())
+    ));
+
+    router.patch('/notifications/:id/read', validId, wrap((req, res) =>
+        res.json(S.markRead(req.params.id))
+    ));
+
+    router.post('/sync', wrap((req, res) =>
+        res.json(S.syncNotifications(ctx))
+    ));
+
+    router.get('/offers', wrap((req, res) =>
+        res.json(S.offers(ctx))
+    ));
+
+    router.post('/quote', wrap((req, res) =>
+        res.json(S.quote(ctx, req.body))
+    ));
+
+    router.post('/checkout', wrap((req, res) =>
+        res.status(201).json(S.checkout(ctx, req.body || {}))
+    ));
+
+    router.use((req, res) =>
+        res.status(404).json({ error: 'Unknown expiry endpoint.' })
+    );
+
+    router.use((err, req, res, next) => {
+        if (err instanceof S.HttpError) {
+            return res.status(err.status).json(
+                err.errors
+                    ? { error: err.message, errors: err.errors }
+                    : { error: err.message }
+            );
+        }
+
+        console.error('[expiry]', err);
+        res.status(500).json({
+            error: 'Unexpected server error.'
+        });
+    });
+
+    return router;
 };
