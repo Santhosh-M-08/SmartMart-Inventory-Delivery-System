@@ -1,0 +1,13 @@
+# Environment files
+.env
+Backend/.env
+
+# Dependencies
+node_modules/
+Backend/node_modules/
+
+# Logs
+*.log
+
+# Python cache
+__pycache__/
