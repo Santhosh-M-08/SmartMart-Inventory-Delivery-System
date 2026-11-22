@@ -140,7 +140,35 @@
         }
 
         return response.json();
+    }async function createProduct(product) {
+    const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(product)
+    });
+
+    if (!response.ok) {
+        let message = "Unable to add product.";
+
+        try {
+            const result = await response.json();
+
+            if (result.error) {
+                message = result.error;
+            } else if (result.errors) {
+                message = Object.values(result.errors).join(" ");
+            }
+        } catch (error) {
+            // Keep default error message
+        }
+
+        throw new Error(message);
     }
+
+    return response.json();
+}
 
     async function refreshInventory() {
         state.products = await getProducts();
@@ -355,18 +383,20 @@
     const dialog = $("productDialog");
 
     const fields = {
-        name: $("fName"),
-        category: $("fCategory"),
-        price: $("fPrice"),
-        stock: $("fStock")
-    };
+    name: $("fName"),
+    category: $("fCategory"),
+    price: $("fPrice"),
+    stock: $("fStock"),
+    expiryDate: $("fExpiryDate")
+};
 
     const errorIds = {
-        name: "eName",
-        category: "eCategory",
-        price: "ePrice",
-        stock: "eStock"
-    };
+    name: "eName",
+    category: "eCategory",
+    price: "ePrice",
+    stock: "eStock",
+    expiryDate: "eExpiryDate"
+};
 
     function clearErrors() {
         Object.keys(errorIds).forEach(key => {
@@ -378,37 +408,42 @@
         });
     }
 
-    function openForm(product) {
-        if (!product) {
-            toast(
-                "The SmartMart catalog is fixed to 15 products.",
-                true
-            );
-            return;
-        }
+    function openForm(product = null) {
+    clearErrors();
 
-        clearErrors();
+    $("productForm").reset();
 
-        $("productForm").reset();
+    const isEditing = Boolean(product);
 
-        $("dialogTitle").textContent = "Edit product";
-        $("saveBtn").textContent = "Save changes";
+    $("dialogTitle").textContent = isEditing
+        ? "Edit product"
+        : "Add product";
 
-        $("fId").value = product.id;
+    $("saveBtn").textContent = isEditing
+        ? "Save changes"
+        : "Save product";
 
-        fields.name.value = product.name;
-        fields.category.value = product.category;
-        fields.price.value = product.price;
-        fields.stock.value = product.stock;
+    $("fId").value = isEditing ? product.id : "";
 
-        // Preserve ML product identity and category
-        fields.name.readOnly = true;
-        fields.category.readOnly = true;
+    fields.name.value = isEditing ? product.name : "";
+    fields.category.value = isEditing ? product.category : "";
+    fields.price.value = isEditing ? product.price : "";
+    fields.stock.value = isEditing ? product.stock : "";
 
-        dialog.showModal();
+    fields.name.readOnly = isEditing;
+    fields.category.readOnly = isEditing;
+    // Show expiry date only when adding a product
+    $("expiryDateField").hidden = isEditing;
+    fields.expiryDate.required = !isEditing;
+    fields.expiryDate.value = "";
+    dialog.showModal();
 
+    if (isEditing) {
         fields.stock.focus();
+    } else {
+        fields.name.focus();
     }
+}
 
     function validate(data) {
         const errors = {};
@@ -436,80 +471,115 @@
     }
 
     async function onSubmit(event) {
-        event.preventDefault();
+    event.preventDefault();
 
-        if (saving) {
-            return;
+    if (saving) {
+        return;
+    }
+
+    clearErrors();
+
+    const idValue = $("fId").value;
+    const isEditing = idValue !== "";
+
+    const existingProduct = isEditing
+        ? state.products.find(
+            product => product.id === Number(idValue)
+        )
+        : null;
+
+    if (isEditing && !existingProduct) {
+        toast("Product not found.", true);
+        return;
+    }
+
+    const product = {
+        name: isEditing
+            ? existingProduct.name
+            : fields.name.value.trim(),
+
+        category: isEditing
+            ? existingProduct.category
+            : fields.category.value.trim(),
+
+        price: fields.price.value === ""
+            ? NaN
+            : Number(fields.price.value),
+
+        stock: fields.stock.value === ""
+            ? NaN
+            : Number(fields.stock.value)
+    };
+
+    const errors = {};
+
+    if (!product.name) {
+        errors.name = "Enter a product name.";
+    }
+
+    if (!product.category) {
+        errors.category = "Enter a product category.";
+    }
+    // Expiry date is required for new products
+if (!isEditing) {
+    if (!fields.expiryDate.value) {
+        errors.expiryDate = "Please select an expiry date.";
+    } else if (
+        Number.isNaN(Date.parse(fields.expiryDate.value))
+    ) {
+        errors.expiryDate = "Enter a valid expiry date.";
+    }
+}
+    Object.assign(errors, validate(product));
+
+    const keys = Object.keys(errors);
+
+    if (keys.length > 0) {
+        keys.forEach(key => {
+            $(errorIds[key]).textContent = errors[key];
+
+            fields[key]
+                .closest(".inv-field")
+                .classList.add("has-error");
+        });
+
+        fields[keys[0]].focus();
+
+        toast("Please fix the highlighted fields.", true);
+        return;
+    }
+
+    saving = true;
+    $("saveBtn").disabled = true;
+
+    try {
+        if (isEditing) {
+            await updateProduct({
+                id: existingProduct.id,
+                ...product
+            });
+        } else {
+            await createProduct(product);
         }
 
-        clearErrors();
+        await refreshInventory();
 
-        const id = Number($("fId").value);
+        dialog.close();
 
-        const existingProduct = state.products.find(
-            product => product.id === id
+        toast(
+            isEditing
+                ? `Updated "${product.name}" successfully.`
+                : `Added "${product.name}" successfully.`
         );
 
-        if (!existingProduct) {
-            toast("Product not found.", true);
-            return;
-        }
+    } catch (error) {
+        toast(error.message, true);
 
-        // Keep ID, name and category unchanged
-        const updatedProduct = {
-            id: existingProduct.id,
-            name: existingProduct.name,
-            category: existingProduct.category,
-            price: fields.price.value === ""
-                ? NaN
-                : Number(fields.price.value),
-            stock: fields.stock.value === ""
-                ? NaN
-                : Number(fields.stock.value)
-        };
-
-        const errors = validate(updatedProduct);
-        const keys = Object.keys(errors);
-
-        if (keys.length > 0) {
-            keys.forEach(key => {
-                $(errorIds[key]).textContent = errors[key];
-
-                fields[key]
-                    .closest(".inv-field")
-                    .classList.add("has-error");
-            });
-
-            fields[keys[0]].focus();
-
-            toast("Please fix the highlighted fields.", true);
-            return;
-        }
-
-        saving = true;
-        $("saveBtn").disabled = true;
-
-        try {
-            // Save changes to SQLite
-            await updateProduct(updatedProduct);
-
-            // Refresh inventory from the database
-            await refreshInventory();
-
-            dialog.close();
-
-            toast(
-                `Updated "${updatedProduct.name}" successfully.`
-            );
-
-        } catch (error) {
-            toast(error.message, true);
-
-        } finally {
-            saving = false;
-            $("saveBtn").disabled = false;
-        }
+    } finally {
+        saving = false;
+        $("saveBtn").disabled = false;
     }
+}
 
     // ------------------------------------------
     // FILTER CONTROLS
@@ -532,8 +602,13 @@
     async function init() {
         // Fixed 15-product catalog:
         // disable product creation
-        $("addBtn").hidden = true;
+        $("addBtn").hidden = false;
         $("emptyAction").hidden = true;
+
+        // Add Product button
+        $("addBtn").addEventListener("click", () => {
+        openForm();
+        });
 
         // Load saved low-stock threshold
         const saved = Number(
