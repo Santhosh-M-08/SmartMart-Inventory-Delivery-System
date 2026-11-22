@@ -171,7 +171,8 @@ function toRow(e) {
         overrideMode: e.mode,
         overridePercent:
             b.override && b.override.mode === 'custom'
-                ? b.override.pct : null
+                ? b.override.pct : null,
+        overrideStartNow: !!(b.override && b.override.startNow)
     };
 }
 
@@ -225,22 +226,17 @@ function getBatch(ctx, batchId) {
 }
 
 function addBatch(ctx, input) {
-    syncProducts(ctx);
-
-    const product = ctx.readProducts().find(
-        p => Number(p.id) === Number(input.productId)
-    );
-
-    const batchNo = String(input.batchNo || '').trim().toUpperCase();
-    const qty = Number(input.qty);
-    const expiryDate = String(input.expiryDate || '');
+    const productId = Number(input && input.productId);
+    const batchNo = String((input && input.batchNo) || '').trim().toUpperCase();
+    const qty = Number(input && input.qty);
+    const expiryDate = String((input && input.expiryDate) || '');
 
     const errors = {};
-
-    if (!product) errors.productId = 'Choose an existing product.';
+    if (!Number.isSafeInteger(productId) || productId <= 0)
+        errors.productId = 'Choose an existing product.';
     if (!/^[A-Z0-9][A-Z0-9-]{1,19}$/.test(batchNo))
         errors.batchNo = 'Use 2–20 letters, numbers or hyphens.';
-    if (!Number.isInteger(qty) || qty < 1 || qty > 100000)
+    if (!Number.isSafeInteger(qty) || qty < 1 || qty > 100000)
         errors.qty = 'Enter a whole number of 1 or more.';
     if (!R.parseISODate(expiryDate))
         errors.expiryDate = 'Enter a valid date as YYYY-MM-DD.';
@@ -248,28 +244,47 @@ function addBatch(ctx, input) {
     if (Object.keys(errors).length)
         throw new HttpError(400, 'Invalid batch.', errors);
 
-    const duplicate = db.prepare(`
-        SELECT id FROM expiry_batches
-        WHERE product_id = ? AND batch_no = ?
-    `).get(product.id, batchNo);
+    // All checks and the INSERT share one SQLite transaction.
+    // Adding a batch assigns existing stock; it does not increase Inventory.
+    const insert = db.transaction(() => {
+        const product = db.prepare(`
+            SELECT id, stock FROM products WHERE id = ?
+        `).get(productId);
+        if (!product)
+            throw new HttpError(404, 'Product not found.');
 
-    if (duplicate)
-        throw new HttpError(409, 'Duplicate batch.', {
-            batchNo: 'This batch number already exists for that product.'
-        });
+        const duplicate = db.prepare(`
+            SELECT id FROM expiry_batches
+            WHERE product_id = ? AND batch_no = ?
+        `).get(productId, batchNo);
+        if (duplicate)
+            throw new HttpError(409, 'Duplicate batch.', {
+                batchNo: 'This batch number already exists for that product.'
+            });
 
-    const batchId = id();
+        const totals = db.prepare(`
+            SELECT COALESCE(SUM(qty_available), 0) AS assigned
+            FROM expiry_batches
+            WHERE product_id = ? AND written_off = 0
+        `).get(productId);
+        const unassigned = Number(product.stock) - Number(totals.assigned);
+        if (qty > unassigned)
+            throw new HttpError(409,
+                'Only ' + Math.max(0, unassigned) +
+                ' unassigned unit(s) are available for this product. ' +
+                'Adding a batch does not increase Inventory stock.');
 
-    db.prepare(`
-        INSERT INTO expiry_batches
-        (id, batch_no, product_id, qty_received, qty_available,
-         expiry_date, received_date, source, written_off)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'actual', 0)
-    `).run(
-        batchId, batchNo, product.id, qty, qty,
-        expiryDate, today()
-    );
+        const batchId = id();
+        db.prepare(`
+            INSERT INTO expiry_batches
+            (id, batch_no, product_id, qty_received, qty_available,
+             expiry_date, received_date, source, written_off)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'actual', 0)
+        `).run(batchId, batchNo, productId, qty, qty, expiryDate, today());
+        return batchId;
+    });
 
+    const batchId = insert();
     syncNotifications(ctx);
     return getBatch(ctx, batchId);
 }
@@ -326,36 +341,73 @@ function setOverride(ctx, batchId, body) {
 }
 
 function writeOff(ctx, batchId) {
-    const batch = getBatchRecord(batchId);
+    // Stage 4: atomic SQLite expiry write-off.
+    // Inventory stock and batch status must commit or roll back together.
+    const applyWriteOff = db.transaction(() => {
+        const batch = db.prepare(`
+            SELECT id, product_id, qty_available, expiry_date, written_off
+            FROM expiry_batches
+            WHERE id = ?
+        `).get(batchId);
 
-    if (!batch) throw new HttpError(404, 'Batch not found.');
+        if (!batch) {
+            throw new HttpError(404, 'Batch not found.');
+        }
 
-    if (R.daysBetween(today(), batch.expiry_date) >= 0)
-        throw new HttpError(400, 'Only expired batches can be written off.');
+        if (batch.written_off) {
+            throw new HttpError(409, 'This batch was already written off.');
+        }
 
-    if (batch.written_off)
-        throw new HttpError(409, 'This batch was already written off.');
+        if (R.daysBetween(today(), batch.expiry_date) >= 0) {
+            throw new HttpError(400, 'Only expired batches can be written off.');
+        }
 
-    const products = ctx.readProducts();
-    const product = products.find(p => p.id === batch.product_id);
+        const units = Number(batch.qty_available);
 
-    if (product) {
-        product.stock = Math.max(
-            0,
-            Number(product.stock) - Number(batch.qty_available)
-        );
-        ctx.writeProducts(products);
+        // Prevent stock going negative: fail the entire transaction if
+        // Inventory has less stock than the expired batch claims.
+        const stockUpdate = db.prepare(`
+            UPDATE products
+            SET stock = stock - ?
+            WHERE id = ? AND stock >= ?
+        `).run(units, batch.product_id, units);
+
+        if (stockUpdate.changes !== 1) {
+            throw new HttpError(
+                409,
+                'Inventory stock is inconsistent with this batch. ' +
+                'Write-off cancelled without changing any data.'
+            );
+        }
+
+        const batchUpdate = db.prepare(`
+            UPDATE expiry_batches
+            SET written_off = 1
+            WHERE id = ? AND written_off = 0
+        `).run(batchId);
+
+        if (batchUpdate.changes !== 1) {
+            throw new HttpError(409, 'Batch changed. Write-off cancelled.');
+        }
+
+        return {
+            id: batchId,
+            writtenOff: true,
+            units
+        };
+    });
+
+    const result = applyWriteOff();
+
+    // Notification generation is non-critical; do not report failure after
+    // an otherwise successful database commit.
+    try {
+        syncNotifications(ctx);
+    } catch (error) {
+        console.error('[expiry] Notification refresh after write-off failed:', error);
     }
 
-    db.prepare(`
-        UPDATE expiry_batches SET written_off = 1 WHERE id = ?
-    `).run(batchId);
-
-    return {
-        id: batchId,
-        writtenOff: true,
-        units: batch.qty_available
-    };
+    return result;
 }
 
 function deleteBatch(batchId) {

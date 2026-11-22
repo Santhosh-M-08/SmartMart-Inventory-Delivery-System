@@ -559,7 +559,10 @@ if (!isEditing) {
                 ...product
             });
         } else {
-            await createProduct(product);
+            await createProduct({
+                ...product,
+                expiryDate: fields.expiryDate.value
+            });
         }
 
         await refreshInventory();
