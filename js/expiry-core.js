@@ -69,9 +69,10 @@
     try { localStorage.setItem(key, JSON.stringify(value)); return true; }
     catch (err) { return false; }
   }
+  /* SQLite-read adapter: stage 1 */
   function getProducts() {
-    const list = read(KEYS.products, []);
-    return Array.isArray(list) ? list : [];
+    if (global.SmartMartExpirySqlite) return global.SmartMartExpirySqlite.products;
+    return [];
   }
   function saveProducts(list) { return write(KEYS.products, list); }
   function getOrders() {
@@ -79,11 +80,8 @@
     return Array.isArray(list) ? list : [];
   }
   function getBatches() {
-    const list = read(KEYS.batches, []);
-    return (Array.isArray(list) ? list : []).map(function (b) {
-      if (!Array.isArray(b.sales)) b.sales = [];
-      return b;
-    });
+    if (global.SmartMartExpirySqlite) return global.SmartMartExpirySqlite.batches;
+    return [];
   }
   function saveBatches(list) { return write(KEYS.batches, list); }
 
@@ -188,7 +186,8 @@
     return { ok: Object.keys(errors).length === 0, errors: errors, value: value };
   }
   function getSettings() {
-    const stored = read(KEYS.settings, {});
+    const stored = global.SmartMartExpirySqlite
+      ? global.SmartMartExpirySqlite.settings : {};
     const merged = Object.assign({}, DEFAULT_SETTINGS, stored && typeof stored === 'object' ? stored : {});
     const v = validateSettings(merged);
     return v.ok ? v.value : Object.assign({}, DEFAULT_SETTINGS);
